@@ -1,0 +1,37 @@
+name: Android build
+
+on:
+  pull_request:
+  push:
+    branches: [master, feat/android-libgdx]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build core tests and Android debug APK
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: '8.9'
+          arguments: :core:test :android:assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tomb-mask-kids-debug-apk
+          path: android/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
