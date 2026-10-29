@@ -41,6 +41,7 @@ public final class ParentSettingsScreen extends ScreenAdapter {
 
     @Override
     public void show() {
+        Gdx.input.setInputProcessor(null);
         batch = new SpriteBatch();
         shapes = new ShapeRenderer();
         font = new BitmapFont();
@@ -142,10 +143,16 @@ public final class ParentSettingsScreen extends ScreenAdapter {
             font.draw(batch, "INICIAR", 260, y - 5);
             index++;
         }
-        font.draw(batch, "NOVO: toque no botao abaixo", 20, 140);
-        font.draw(batch, "Toque numa atividade para iniciar o bloqueio.", 20, 112);
+        BlockRule active = controller.getManager().getActiveRule(System.currentTimeMillis());
+        if (active != null) {
+            font.draw(batch, "Bloqueado: " + active.getTitle(), 18, 170);
+        } else {
+            font.draw(batch, "Sem bloqueio ativo", 18, 170);
+        }
+        font.draw(batch, "Toque numa atividade para iniciar o bloqueio.", 18, 145);
         batch.end();
-        drawButton(210, 26, 132, 48, "NOVA ATIVIDADE");
+        drawButton(210, 78, 132, 42, "LIBERAR JOGO");
+        drawButton(210, 26, 132, 42, "NOVA ATIVIDADE");
         if (Gdx.input.justTouched()) handleTouch();
     }
 
@@ -156,7 +163,16 @@ public final class ParentSettingsScreen extends ScreenAdapter {
             game.setScreen(new StartScreen(game));
             return;
         }
-        if (x >= 205 && x <= 350 && y >= 20 && y <= 82) {
+        if (x >= 205 && x <= 350 && y >= 78 && y <= 120) {
+            if (controller.getManager().getActiveRule(System.currentTimeMillis()) != null) {
+                controller.cancelActivityLock();
+                game.showAppropriateScreen();
+            } else {
+                status = "Nao ha bloqueio ativo para liberar.";
+            }
+            return;
+        }
+        if (x >= 205 && x <= 350 && y >= 20 && y <= 68) {
             addActivity();
             return;
         }
