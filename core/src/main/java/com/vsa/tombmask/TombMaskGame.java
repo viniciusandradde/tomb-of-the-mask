@@ -14,15 +14,17 @@ public final class TombMaskGame extends Game {
     @Override
     public void create() {
         repository = new BlockRuleRepository(Gdx.app.getPreferences("tombmask-parental-settings"));
-        lockManager = repository.load(System.currentTimeMillis());
         showAppropriateScreen();
     }
 
+    /** Reload persisted rules on each screen transition so parent actions take effect immediately. */
     public void showAppropriateScreen() {
+        lockManager = repository.load(System.currentTimeMillis());
         if (lockManager.getActiveRule(System.currentTimeMillis()) != null) {
+            repository.save(lockManager, System.currentTimeMillis());
             setScreen(new ChildLockScreen(lockManager, this::showAppropriateScreen));
         } else {
-            setScreen(new StartScreen());
+            setScreen(new StartScreen(this));
         }
     }
 
