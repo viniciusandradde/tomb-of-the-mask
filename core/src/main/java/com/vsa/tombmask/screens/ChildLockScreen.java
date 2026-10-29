@@ -1,6 +1,7 @@
 package com.vsa.tombmask.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -22,6 +23,7 @@ public final class ChildLockScreen extends ScreenAdapter {
 
     private final BlockLockManager lockManager;
     private final Runnable onUnlocked;
+    private final Runnable onParentSettings;
     private final OrthographicCamera camera = new OrthographicCamera();
     private final Viewport viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
     private final GlyphLayout layout = new GlyphLayout();
@@ -29,12 +31,13 @@ public final class ChildLockScreen extends ScreenAdapter {
     private BitmapFont font;
     private boolean unlockCallbackSent;
 
-    public ChildLockScreen(BlockLockManager lockManager, Runnable onUnlocked) {
-        if (lockManager == null || onUnlocked == null) {
-            throw new IllegalArgumentException("lockManager and onUnlocked are required");
+    public ChildLockScreen(BlockLockManager lockManager, Runnable onUnlocked, Runnable onParentSettings) {
+        if (lockManager == null || onUnlocked == null || onParentSettings == null) {
+            throw new IllegalArgumentException("lockManager and callbacks are required");
         }
         this.lockManager = lockManager;
         this.onUnlocked = onUnlocked;
+        this.onParentSettings = onParentSettings;
     }
 
     @Override
@@ -43,6 +46,14 @@ public final class ChildLockScreen extends ScreenAdapter {
         font = new BitmapFont();
         font.getData().setScale(1.5f);
         unlockCallbackSent = false;
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                float x = screenX * WORLD_WIDTH / Math.max(1, Gdx.graphics.getWidth());
+                float y = (Gdx.graphics.getHeight() - screenY) * WORLD_HEIGHT / Math.max(1, Gdx.graphics.getHeight());
+                if (x >= 250f && y <= 52f) onParentSettings.run();
+                return true;
+            }
+        });
     }
 
     @Override
@@ -75,6 +86,7 @@ public final class ChildLockScreen extends ScreenAdapter {
         font.draw(batch, BlockLockManager.formatRemaining(active.getRemainingMillis(now)), 34f, 185f);
         font.draw(batch, "Quando o tempo terminar,", 34f, 100f);
         font.draw(batch, "voce podera jogar de novo!", 34f, 70f);
+        font.draw(batch, "Responsaveis", 250f, 24f);
 
         batch.end();
     }
