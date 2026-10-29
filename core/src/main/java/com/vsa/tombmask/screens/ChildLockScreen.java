@@ -5,6 +5,7 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -23,6 +24,7 @@ public final class ChildLockScreen extends ScreenAdapter {
     private final Runnable onUnlocked;
     private final OrthographicCamera camera = new OrthographicCamera();
     private final Viewport viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
+    private final GlyphLayout layout = new GlyphLayout();
     private SpriteBatch batch;
     private BitmapFont font;
     private boolean unlockCallbackSent;
@@ -83,14 +85,8 @@ public final class ChildLockScreen extends ScreenAdapter {
         float lineY = y;
         for (String word : words) {
             String candidate = line.isEmpty() ? word : line + " " + word;
-            if (font.getRegion().getTexture() != null
-                && font.getData().getGlyphs(candidate).size > 0
-                && font.getRegion().getTexture().getWidth() > 0) {
-                // Keep the wrapping logic deterministic without requiring a Skin asset.
-            }
-            if (font.getRegion().getTexture() != null
-                && font.getData().getGlyphs(candidate).size > 0
-                && font.getSpaceXadvance() * candidate.length() > targetWidth) {
+            layout.setText(font, candidate);
+            if (layout.width > targetWidth && !line.isEmpty()) {
                 font.draw(batch, line, x, lineY);
                 line = word;
                 lineY -= 42f;
