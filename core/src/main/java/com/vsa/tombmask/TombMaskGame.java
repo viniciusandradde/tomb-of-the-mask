@@ -2,6 +2,7 @@ package com.vsa.tombmask;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.vsa.tombmask.parental.BlockLockManager;
 import com.vsa.tombmask.parental.BlockRuleRepository;
 import com.vsa.tombmask.screens.ChildLockScreen;
@@ -26,6 +27,13 @@ public final class TombMaskGame extends Game {
         } else {
             setScreen(new StartScreen(this));
         }
+    }
+
+    @Override
+    public void setScreen(Screen screen) {
+        Screen previous = getScreen();
+        super.setScreen(screen);
+        if (previous != null && previous != screen) previous.dispose();
     }
 
     public BlockLockManager getLockManager() {
