@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.vsa.tombmask.parental.BlockLockManager;
 import com.vsa.tombmask.parental.BlockRuleRepository;
 import com.vsa.tombmask.screens.ChildLockScreen;
+import com.vsa.tombmask.screens.ParentSettingsScreen;
 import com.vsa.tombmask.screens.StartScreen;
 
 public final class TombMaskGame extends Game {
@@ -23,7 +24,7 @@ public final class TombMaskGame extends Game {
         lockManager = repository.load(System.currentTimeMillis());
         if (lockManager.getActiveRule(System.currentTimeMillis()) != null) {
             repository.save(lockManager, System.currentTimeMillis());
-            setScreen(new ChildLockScreen(lockManager, this::showAppropriateScreen));
+            setScreen(new ChildLockScreen(lockManager, this::showAppropriateScreen, () -> setScreen(new ParentSettingsScreen(this))));
         } else {
             setScreen(new StartScreen(this));
         }
