@@ -89,7 +89,6 @@ public final class StartScreen extends ScreenAdapter {
 
     @Override
     public void dispose() {
-        Gdx.input.setInputProcessor(null);
         if (font != null) font.dispose();
         if (batch != null) batch.dispose();
         if (shapes != null) shapes.dispose();
