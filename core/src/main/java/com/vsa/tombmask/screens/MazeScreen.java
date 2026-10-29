@@ -63,18 +63,17 @@ public final class MazeScreen extends ScreenAdapter {
                 if (wy < 175f) {
                     if (wx < 125f) move(-1, 0);
                     else if (wx > 235f) move(1, 0);
-                    else if (wy < 95f) move(0, -1);
-                    else move(0, 1);
+                    else if (wy < 95f) move(0, 1);
+                    else move(0, -1);
                 } else {
                     float dx = screenX - downX;
                     float dy = downY - screenY;
                     if (Math.abs(dx) + Math.abs(dy) < 24f) return true;
-                    if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1, 0);
-                    else move(dy < 0 ? 1 : -1, 0);
-                    // Vertical swipes should move vertically in the maze.
-                    if (Math.abs(dy) >= Math.abs(dx)) {
-                        // Undo the horizontal command above by applying the intended vertical direction only.
-                        move(0, dy < 0 ? -1 : 1);
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        move(dx > 0 ? 1 : -1, 0);
+                    } else {
+                        // Screen swipe up moves toward the top of the map (row index decreases).
+                        move(0, dy > 0 ? -1 : 1);
                     }
                 }
                 return true;
