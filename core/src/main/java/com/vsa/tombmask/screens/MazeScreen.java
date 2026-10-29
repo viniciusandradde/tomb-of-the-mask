@@ -153,7 +153,6 @@ public final class MazeScreen extends ScreenAdapter {
 
     @Override
     public void dispose() {
-        Gdx.input.setInputProcessor(null);
         shapes.dispose();
         batch.dispose();
         font.dispose();
