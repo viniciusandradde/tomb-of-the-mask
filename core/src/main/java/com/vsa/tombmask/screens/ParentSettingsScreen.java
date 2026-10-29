@@ -115,11 +115,18 @@ public final class ParentSettingsScreen extends ScreenAdapter {
             drawWrapped(status, 20, 540, 320);
             font.draw(batch, "Toque na tela para tentar novamente.", 20, 470);
             batch.end();
-            if (Gdx.input.justTouched() && !promptOpen) {
-                if (preferences.getString(PIN_HASH_KEY, "").isEmpty()) requestPin(true);
-                else requestPin(false);
+            if (Gdx.input.justTouched()) {
+                float x = Gdx.input.getX() * 360f / Math.max(1, Gdx.graphics.getWidth());
+                float y = (Gdx.graphics.getHeight() - Gdx.input.getY()) * 640f / Math.max(1, Gdx.graphics.getHeight());
+                if (x >= 18 && x <= 118 && y >= 26 && y <= 74) {
+                    game.setScreen(new StartScreen(game));
+                    return;
+                }
+                if (!promptOpen) {
+                    if (preferences.getString(PIN_HASH_KEY, "").isEmpty()) requestPin(true);
+                    else requestPin(false);
+                }
             }
-            if (hit(18, 26, 100, 48)) game.setScreen(new StartScreen(game));
             return;
         }
 
