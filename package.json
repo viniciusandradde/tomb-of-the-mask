@@ -1,0 +1,14 @@
+{
+  "name": "tumba-da-mascara",
+  "version": "1.0.0",
+  "description": "Jogo de labirinto neon em pixel art (PWA, offline) inspirado em Tomb of the Mask",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "build:levels": "node tools/build-levels.js",
+    "build:icons": "node tools/make-icons.js",
+    "validate": "node tools/validate.js",
+    "test:e2e": "node tools/e2e.js"
+  },
+  "license": "MIT"
+}
