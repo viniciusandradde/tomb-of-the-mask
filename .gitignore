@@ -6,3 +6,5 @@ config.xml
 
 # Game_Main$*.class
 # Game_Classes$*.class
+shots/
+node_modules/

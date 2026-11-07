@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Tumba da Máscara</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Labirintos neon em pixel art: deslize, colete, desvie das armadilhas. Jogo PWA que funciona offline.">
+  <meta name="theme-color" content="#05030a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tumba">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Tumba da Máscara" role="img"></canvas>
+  <div id="install" hidden>
+    <button id="install-btn" type="button">Instalar o jogo</button>
+    <button id="install-close" type="button" aria-label="Fechar">×</button>
+  </div>
+  <noscript><p class="noscript">Este jogo precisa de JavaScript.</p></noscript>
+  <script src="js/maze.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/font.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
