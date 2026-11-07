@@ -21,7 +21,7 @@ Sem instalar nada além do Node. Também há `Dockerfile` e um workflow de GitHu
 ## Conteúdo
 
 - 80 fases em 8 mundos (Catacumba, Cripta Azul, Selva Perdida, Vulcão, Abismo, Templo Dourado, Sombras, Núcleo), todas validadas por um solver: saída e coletáveis sempre alcançáveis.
-- Modo Arcade infinito com lava acelerando e recorde salvo.
+- Modo Arcade: coluna infinita para cima com espaço aberto, obstáculos e uma barreira piscante na cor do trecho que sobe em velocidade média. Encostou, perdeu.
 - 3 estrelas por fase, loja de máscaras com bônus, power-ups (escudo, congelar, ímã).
 - Música chiptune e efeitos sonoros gerados em tempo real (sem arquivos de áudio).
 - **Modo Lúdico** (para crianças pequenas) e **Modo Clássico**, com a mesma dificuldade: o lúdico adiciona voz em português, elogios, confete e mensagens carinhosas; a seta de dica é opcional e vem desligada.

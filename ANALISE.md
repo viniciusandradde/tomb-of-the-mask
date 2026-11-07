@@ -69,7 +69,10 @@ até a saída. O gerador:
   armadilhas que atiram flechas, lava e água subindo (mundos 4, 5, 7 e 8), com perseguição.
 - Power-ups: escudo, congelar (6 s), ímã (10 s). Invulnerável até o primeiro movimento.
 - Loja de máscaras com bônus passivos (ímã permanente, escudo inicial, moedas em dobro, morcegos lentos).
-- Modo Arcade: torre infinita gerada em tempo real, cada bloco validado pelo solver, lava acelerando, recorde salvo.
+- Modo Arcade: coluna infinita para cima, gerada em tempo real com espaço aberto (poucas paredes) e obstáculos no
+  meio do caminho (espinhos, morcegos). Cada dois trechos a torre troca de cor/mundo e a música acompanha. Uma **barreira**
+  que pisca na cor predominante do trecho sobe em velocidade média e constante (1,5 células/s, +10% a cada 10 trechos);
+  encostou, perdeu. Pontuação = altura x 10 + pontos; recorde salvo. Cada trecho é validado pelo solver.
 - Progresso, moedas, estrelas, recorde e opções salvos em `localStorage`.
 - Bônus de tempo na pontuação, contagem de movimentos vs. "par" (caminho mínimo).
 

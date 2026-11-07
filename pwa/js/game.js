@@ -198,17 +198,20 @@
     startArcade() {
       this.mode = 'arcade';
       this.levelIndex = -1;
-      this.world = root.WORLDS[7];
+      this.world = root.WORLDS[0];
       this.arcadeRng = M.rng(Date.now() & 0xffffff);
       this.arcadeChunks = 0;
-      // bloco inicial: uma fase normal curta com saída no teto
-      const first = M.generate({ h: 14, wallDensity: 0.2, spikes: 1, coins: 1, bats: 1, minMoves: 4 }, this.arcadeRng);
-      const rows = first.rows.map((r) => r.replace('E', 'E'));
-      this.setupGrid(rows, { type: 'lava', speed: 1.2, delay: 3 });
+      this.themes = []; // trechos da torre: cada um com a cor de um mundo
+      // bloco inicial: curto e aberto, com saída no teto
+      const first = M.generate({ h: 14, wallDensity: 0.12, spikes: 0, coins: 1, bats: 0, minMoves: 3, maxMoves: 30 }, this.arcadeRng);
+      const rows = first.rows;
+      // a barreira: sobe em velocidade média e constante; piscando na cor do trecho
+      this.setupGrid(rows, { type: 'barrier', speed: 1.5, delay: 2.5 });
+      this.themes.push({ minY: 0, maxY: rows.length - 1, world: 0 });
       this.arcadeExitX = M.find(rows, T.EXIT)[0];
-      this.level = { n: 0, world: 7, rows, par: 0 };
+      this.level = { n: 0, world: 0, rows, par: 0 };
       this.extendArcade();
-      this.audio.startMusic(7);
+      this.audio.startMusic(0);
       this.state = 'play'; this.buttons = [];
       this.hintTimer = 0;
       this.height = 0;
@@ -218,21 +221,30 @@
     extendArcade() {
       // garante blocos suficientes acima do jogador
       while (this.grid.minY > this.player.cy - 40) {
-        const diff = Math.min(1, this.arcadeChunks / 25);
+        const diff = Math.min(1, this.arcadeChunks / 30);
+        // espaço aberto: poucas paredes, obstáculos no meio do caminho
         const chunk = M.generateChunk({
-          entryX: this.arcadeExitX, h: 12 + Math.round(diff * 6),
-          wallDensity: 0.2 + diff * 0.08, spikes: 1 + Math.round(diff * 4), coins: 1, bats: Math.round(0.5 + diff * 2), vbats: Math.round(diff * 1.5),
-          shields: 0.15, minMoves: 3,
+          entryX: this.arcadeExitX, h: 12 + Math.round(diff * 4),
+          wallDensity: 0.11 + diff * 0.05, spikes: 1 + Math.round(diff * 3), coins: 1, bats: Math.round(0.6 + diff * 1.6), vbats: Math.round(diff * 1.2),
+          shields: 0.12, minMoves: 2, maxMoves: 40,
         }, this.arcadeRng);
         if (!chunk) break;
+        const worldIdx = Math.floor((this.arcadeChunks + 1) / 2) % root.WORLDS.length;
         // a antiga linha de saída vira abertura; a nova saída fica no topo do bloco
         const exitRow = this.grid.rows.get(this.grid.minY);
         exitRow[this.arcadeExitX] = T.EMPTY;
         const rows = chunk.rows.slice();
         this.grid.prepend(rows);
+        this.themes.push({ minY: this.grid.minY, maxY: this.grid.minY + rows.length - 1, world: worldIdx });
         this.spawnEntities(this.grid.minY, this.grid.minY + rows.length - 1);
         this.arcadeExitX = chunk.exitX;
         this.arcadeChunks++;
+      }
+      // cor predominante do trecho em que o jogador está
+      const th = this.themeAt(this.player.cy);
+      if (th && this.world !== root.WORLDS[th.world]) {
+        this.world = root.WORLDS[th.world];
+        this.audio.startMusic(this.world.music);
       }
       // descarta o que está muito abaixo (já coberto pela lava)
       const cut = Math.floor(this.player.cy + 30);
@@ -240,6 +252,17 @@
         this.grid.dropBelow(cut);
         this.bats = this.bats.filter((b) => b.y < cut);
       }
+    }
+
+    themeAt(y) {
+      if (!this.themes) return null;
+      for (const t of this.themes) if (y >= t.minY && y <= t.maxY) return t;
+      return this.themes[this.themes.length - 1] || null;
+    }
+    worldAtRow(y) {
+      if (this.mode !== 'arcade') return this.world;
+      const t = this.themeAt(y);
+      return t ? root.WORLDS[t.world] : this.world;
     }
 
     setupGrid(rows, fluid) {
@@ -424,14 +447,17 @@
       if (this.fluid) {
         if (this.started && !this.fluid.started && this.elapsed > this.fluid.delay) this.fluid.started = true;
         if (this.fluid.started) {
-          const accel = this.mode === 'arcade' ? 1 + this.arcadeChunks * 0.06 : 1;
-          // a lava persegue: se ficar muito longe, acelera
+          const barrier = this.fluid.type === 'barrier';
+          // barreira do arcade: velocidade média e constante, com leve aumento a cada 10 trechos
+          const accel = barrier ? 1 + Math.floor(this.arcadeChunks / 10) * 0.1 : 1;
+          // se ficar fora da tela, acelera para voltar a ser visível
           const gap = this.fluid.y - p.y;
-          const chase = gap > this.viewRows() * 1.2 ? 2.5 : 1;
+          const chase = gap > this.viewRows() * 1.1 ? 2.5 : 1;
           this.fluid.y -= this.fluid.speed * accel * chase * dt;
           if (gap < 4 && !this.fluid.warned) { this.fluid.warned = true; this.audio.lavaWarn(); }
           if (gap > 6) this.fluid.warned = false;
-          if (p.y + 0.3 > this.fluid.y && !p.dead) this.die(this.fluid.type === 'lava' ? 'lava' : 'agua', true);
+          const touch = barrier ? p.y + 0.4 > this.fluid.y : p.y + 0.3 > this.fluid.y;
+          if (touch && !p.dead) this.die(barrier ? 'barreira' : this.fluid.type === 'lava' ? 'lava' : 'agua', true);
         }
       }
 
@@ -648,8 +674,9 @@
         const px = ox + x * s, py = oy + y * s;
         if (c === T.WALL || c in M.SHOOTERS) {
           if (!this.grid.rows.has(y)) continue;
-          this.drawWall(px, py, x, y, w);
-          if (c in M.SHOOTERS) this.drawShooter(px, py, M.SHOOTERS[c], w);
+          const wr = this.worldAtRow(y);
+          this.drawWall(px, py, x, y, wr);
+          if (c in M.SHOOTERS) this.drawShooter(px, py, M.SHOOTERS[c], wr);
         }
       }
       // itens
@@ -657,7 +684,7 @@
       for (let y = y0; y <= y1; y++) for (let x = 0; x < COLS; x++) {
         const c = this.grid.get(x, y);
         const px = ox + x * s, py = oy + y * s;
-        if (c === T.DOT) { const d = Math.max(2, Math.round(s * 0.14)); ctx.fillStyle = w.accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
+        if (c === T.DOT) { const d = Math.max(2, Math.round(s * 0.14)); ctx.fillStyle = this.worldAtRow(y).accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
         else if (c === T.COIN) this.drawCoin(px, py, pulse);
         else if (c === T.SPIKE) this.drawSpike(px, py, x, y);
         else if (c === T.EXIT) this.drawExit(px, py, pulse);
@@ -840,7 +867,38 @@
       ctx.beginPath(); ctx.moveTo(a * 0.6, 0); ctx.lineTo(-a * 0.3, -a * 0.55); ctx.lineTo(-a * 0.05, 0); ctx.lineTo(-a * 0.3, a * 0.55); ctx.closePath(); ctx.fill();
       ctx.restore();
     }
+    drawBarrier(ox, oy) {
+      const ctx = this.ctx, s = this.tile, f = this.fluid;
+      const top = oy + f.y * s;
+      if (top > this.H + s * 2) return;
+      // pisca entre a cor predominante do trecho e branco
+      const col = this.world.color;
+      const blink = Math.floor(this.t * 7) % 2 === 0;
+      const c1 = blink ? '#ffffff' : col;
+      // área abaixo: véu escuro na cor
+      ctx.fillStyle = rgba(col, 0.78); ctx.fillRect(0, top, this.W, this.H - top);
+      ctx.fillStyle = rgba('#000000', 0.45); ctx.fillRect(0, top + s * 0.6, this.W, this.H - top);
+      // listras de energia descendo
+      ctx.fillStyle = rgba('#ffffff', 0.12);
+      for (let yy = top + s * 0.6 + ((this.t * 60) % (s * 1.2)); yy < this.H; yy += s * 1.2) ctx.fillRect(0, yy, this.W, 3);
+      // a barra em si, com brilho forte
+      ctx.shadowColor = c1; ctx.shadowBlur = 26;
+      ctx.fillStyle = c1; ctx.fillRect(0, top - s * 0.25, this.W, s * 0.5);
+      ctx.shadowBlur = 0;
+      // dentes/serrilha na borda superior
+      ctx.fillStyle = c1;
+      const n = Math.ceil(this.W / (s * 0.5));
+      for (let i = 0; i < n; i++) { if ((i + (blink ? 1 : 0)) % 2) ctx.fillRect(i * s * 0.5, top - s * 0.45, s * 0.5, s * 0.2); }
+      // aviso quando está perto
+      const gap = f.y - this.player.y;
+      if (gap < 5 && this.state === 'play') {
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(this.t * 12);
+        F.text(ctx, 'SOBE!', this.W / 2, top - s * 1.4, this.ui, '#ffffff', 'center', { shadow: '#000' });
+        ctx.globalAlpha = 1;
+      }
+    }
     drawFluid(ox, oy) {
+      if (this.fluid.type === 'barrier') return this.drawBarrier(ox, oy);
       const ctx = this.ctx, s = this.tile, f = this.fluid;
       const top = oy + f.y * s;
       if (top > this.H + s) return;
@@ -872,7 +930,7 @@
     renderHud() {
       const ctx = this.ctx, u = this.ui, pad = 8;
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, this.W, u * 7 + pad * 2 + 4);
-      const label = this.mode === 'arcade' ? 'ARCADE' : 'FASE ' + this.level.n;
+      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : 'FASE ' + this.level.n;
       F.text(ctx, label, pad, pad, u, this.world.accent, 'left');
       const sc = this.mode === 'arcade' ? this.arcadeScore() : this.score;
       F.text(ctx, String(sc).padStart(6, '0'), this.W / 2, pad, u, '#ffffff', 'center');
@@ -941,8 +999,8 @@
       const kids = this.kids();
       F.text(this.ctx, kids ? 'OPA!' : 'VOCE MORREU', cx, cy - u * 20, u * 2, kids ? '#ffd23f' : '#ff3b3b', 'center', { shadow: kids ? '#7a3a00' : '#400' });
       const causes = kids
-        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA TE ACERTOU', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU' }
-        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU' };
+        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA TE ACERTOU', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU' }
+        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU' };
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
       if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
       if (Math.floor(this.t * 2) % 2 === 0) F.text(this.ctx, 'TOQUE PARA TENTAR DE NOVO', cx, cy + u * 16, u, '#ffd23f', 'center');
@@ -979,6 +1037,8 @@
       if (this.t - this.deadAt < 0.4) return;
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
       F.text(this.ctx, 'FIM DE JOGO', cx, cy - u * 36, u * 2, '#ff3b3b', 'center', { shadow: '#400' });
+      const causa = { espinho: 'ESPINHOS', morcego: 'MORCEGO', flecha: 'FLECHA', barreira: 'A BARREIRA TE PEGOU' }[this.deathCause] || '';
+      F.text(this.ctx, causa, cx, cy - u * 24, Math.max(1, u - 1), this.world.accent, 'center');
       F.text(this.ctx, 'ALTURA ' + Math.floor(this.height) + 'M', cx, cy - u * 14, u, '#ffffff', 'center');
       F.text(this.ctx, 'PONTOS ' + this.arcadeScore(), cx, cy - u * 4, u, '#ffffff', 'center');
       F.text(this.ctx, (this.newBest ? 'NOVO RECORDE! ' : 'RECORDE ') + this.save.arcadeBest, cx, cy + u * 8, u, '#ffd23f', 'center');

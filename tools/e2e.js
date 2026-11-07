@@ -81,12 +81,19 @@ const { spawn } = require('child_process');
   await page.waitForTimeout(3500);
   await page.screenshot({ path: path.join(out, '6-lava.png') });
   // arcade
-  await page.evaluate(() => game.startArcade());
+  await page.evaluate(() => { game.save.kids = false; game.startArcade(); });
   await page.waitForTimeout(600);
   await page.evaluate(() => game.queueMove('up'));
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(400);
+  await page.evaluate(() => game.queueMove('left'));
+  await page.waitForTimeout(3600); // barreira começa a subir após 2,5 s
   await page.screenshot({ path: path.join(out, '7-arcade.png') });
-  const arcade = await page.evaluate(() => ({ state: game.state, chunks: game.arcadeChunks, minY: game.grid.minY }));
+  const arcade = await page.evaluate(() => ({ state: game.state, chunks: game.arcadeChunks, minY: game.grid.minY, barrier: game.fluid.type, barrierY: +game.fluid.y.toFixed(1), playerY: +game.player.y.toFixed(1), themes: game.themes.length, world: game.world.id }));
+  // fica parado até a barreira encostar
+  await page.waitForFunction(() => game.state === 'arcadeover', null, { timeout: 30000 });
+  const over = await page.evaluate(() => ({ state: game.state, cause: game.deathCause, height: Math.floor(game.height) }));
+  console.log('arcade fim:', JSON.stringify(over));
+  await page.screenshot({ path: path.join(out, '7b-arcade-fim.png') });
   console.log('arcade:', JSON.stringify(arcade));
   await page.evaluate(() => game.goto('shop'));
   await page.waitForTimeout(200);
