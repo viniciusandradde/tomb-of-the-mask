@@ -82,6 +82,23 @@ até a saída. O gerador:
 - Músicas: sequenciador chiptune (bateria, baixo, arpejo, melodia pentatônica) com um tema por mundo
   e um tema de menu, gerados por semente. Sons: blip com combo de tom, moeda, power-up, morte, vitória.
 
+### 3.4 Modo Lúdico x Modo Clássico (os dois sempre disponíveis)
+
+O jogo tem um botão na tela inicial e nas opções para alternar entre os modos.
+**A dificuldade, a velocidade, os perigos e as regras são idênticos nos dois.** O que muda é só a
+forma de se comunicar com a criança (metodologia lúdica, pensada para 5 anos):
+
+| | Modo Lúdico (padrão) | Modo Clássico |
+|---|---|---|
+| Ao errar | "OPA!" + frase de incentivo falada ("Quase! Vamos de novo.") | "VOCÊ MORREU" + causa |
+| Ao vencer | "MUITO BEM! / INCRÍVEL! / UAU!", chuva de confete, elogio falado, dica para pegar as estrelas | "COMPLETA!" |
+| Durante o jogo | Palavras de incentivo em combos de pontos ("LEGAL!", "SHOW!") | sem mensagens extras |
+| Visual | Máscara sorrindo, morcegos com olhos grandes e fofos | Máscara com dentes, morcegos de olhos vermelhos |
+| Voz | Narração em português pelo próprio aparelho (Web Speech, sem internet), ligável/desligável | sem voz |
+| Seta de dica | Opcional e **desligada por padrão**: se ligada, após 5 s parado mostra para onde ir | não disponível |
+
+A voz usa as vozes instaladas no celular/computador (pt-BR quando houver), então não gasta dados nem créditos.
+
 ## 4. Como rodar o servidor em casa
 
 ```bash

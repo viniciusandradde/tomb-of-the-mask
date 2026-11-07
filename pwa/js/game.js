@@ -19,6 +19,10 @@
   const SHOT_SPEED = 9;
   const SHOT_PERIOD = 2.2;
   const COLS = 12;
+  // Modo lúdico (para crianças): só muda a forma de comunicar, nunca a dificuldade.
+  const ELOGIOS = ['Muito bem!', 'Você conseguiu!', 'Incrível!', 'Que demais!', 'Parabéns, campeão!', 'Uau, mandou bem!'];
+  const ANIMOS = ['Opa! Tente de novo.', 'Quase! Vamos de novo.', 'Tudo bem, tenta mais uma vez!', 'Cuidado com isso! Vamos lá.', 'Você está quase lá!'];
+  const COMBOS = ['LEGAL!', 'UAU!', 'SHOW!', 'ISSO!', 'DEMAIS!'];
 
   const MASKS = [
     { id: 'classica', name: 'CLASSICA', color: '#ffd23f', eye: '#1a1a1a', cost: 0, perk: 'A MASCARA ORIGINAL', perkId: null },
@@ -34,7 +38,7 @@
     data: null,
     load() {
       try { this.data = JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (e) { this.data = null; }
-      this.data = Object.assign({ unlocked: 1, stars: {}, best: {}, coins: 0, masks: ['classica'], mask: 'classica', arcadeBest: 0, sfx: true, music: true, crt: true, shake: true }, this.data || {});
+      this.data = Object.assign({ unlocked: 1, stars: {}, best: {}, coins: 0, masks: ['classica'], mask: 'classica', arcadeBest: 0, sfx: true, music: true, crt: true, shake: true, kids: true, voice: true, hints: false }, this.data || {});
       return this.data;
     },
     write() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); } catch (e) { /* armazenamento indisponível */ } },
@@ -187,6 +191,8 @@
       this.state = 'play'; this.buttons = [];
       this.hintTimer = index === 0 ? 6 : 0;
       this.lastFrame = now();
+      this.idleSince = null; this.hint = null; this.combo = 0;
+      if (this.kids() && index === 0 && !this.spokeIntro) { this.spokeIntro = true; this.speak('Deslize o dedo para a máscara voar até a parede!'); }
     }
 
     startArcade() {
@@ -268,6 +274,21 @@
     }
 
     mask() { return MASKS.find((m) => m.id === this.save.mask) || MASKS[0]; }
+    kids() { return !!this.save.kids; }
+    pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    // Voz em português (Web Speech API, usa as vozes do próprio aparelho)
+    speak(text) {
+      if (!this.kids() || !this.save.voice || !root.speechSynthesis) return;
+      try {
+        root.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'pt-BR'; u.rate = 0.95; u.pitch = 1.15;
+        const voices = root.speechSynthesis.getVoices();
+        const v = voices.find((vv) => /pt[-_]BR/i.test(vv.lang)) || voices.find((vv) => /^pt/i.test(vv.lang));
+        if (v) u.voice = v;
+        root.speechSynthesis.speak(u);
+      } catch (e) { /* sem voz disponível */ }
+    }
     viewRows() { return this.H / this.tile; }
 
     queueMove(dir) {
@@ -284,7 +305,7 @@
       while (!M.isSolid(this.grid.get(tx + d[0], ty + d[1]))) { tx += d[0]; ty += d[1]; if (Math.abs(tx - p.cx) + Math.abs(ty - p.cy) > 200) break; }
       if (tx === p.cx && ty === p.cy) { this.bumpFx(d); return; }
       p.dir = d; p.face = d; p.moving = true; p.tx = tx; p.ty = ty; p.queued = null;
-      this.moves++;
+      this.moves++; this.idleSince = this.t; this.hint = null;
       if (!this.started) { this.started = true; this.timeStart = now(); }
       this.audio.move();
     }
@@ -314,6 +335,10 @@
       for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.life -= dt; }
       this.particles = this.particles.filter((p) => p.life > 0);
       if (this.toast) { this.toast.t -= dt; if (this.toast.t <= 0) this.toast = null; }
+      if (this.confetti > 0 && this.state === 'win') {
+        this.confetti -= dt / 3;
+        for (let i = 0; i < 2; i++) this.particles.push({ x: Math.random() * COLS, y: this.camY - 0.5, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3, g: 2, life: 2.5, color: this.pick(['#ffd23f', '#ff4fa3', '#8cf5ff', '#7fc33a', '#ffffff']), size: 0.18 + Math.random() * 0.12 });
+      }
     }
 
     update(dt) {
@@ -321,6 +346,11 @@
       const p = this.player;
       if (this.started) this.elapsed = now() - this.timeStart;
       if (this.hintTimer > 0) this.hintTimer -= dt;
+      // Seta de dica (opcional, desligada por padrão): aparece se a criança ficar parada
+      if (this.save.hints && !p.moving && !p.dead && this.mode === 'stage') {
+        if (this.idleSince == null) this.idleSince = this.t;
+        if (this.t - this.idleSince > 5 && !this.hint) this.hint = this.computeHint();
+      }
       p.squash = Math.max(0, p.squash - dt * 6);
       p.invul = Math.max(0, p.invul - dt);
       if (p.freeze > 0) p.freeze -= dt;
@@ -416,6 +446,30 @@
       this.camY = lerp(this.camY, this.mode === 'arcade' ? target : clamp(target, Math.min(minCam, maxCam), Math.max(minCam, maxCam)), 1 - Math.pow(0.001, dt));
     }
 
+    // Próximo movimento do caminho mais curto a partir da posição atual
+    computeHint() {
+      const rows = [];
+      for (let y = this.grid.minY; y <= this.grid.maxY; y++) rows.push(this.grid.rows.get(y).join(''));
+      const p = this.player;
+      const start = [p.cx, p.cy - this.grid.minY];
+      const key = (x, y) => y * 1000 + x;
+      const q = [start], par = new Map([[key(...start), null]]);
+      let exitK = null;
+      while (q.length && exitK === null) {
+        const [x, y] = q.shift();
+        for (const d of M.DIRS) {
+          const sl = M.slide(rows, x, y, d[0], d[1]);
+          if (sl.dead || !sl.path.length) continue;
+          const k = key(sl.x, sl.y);
+          if (!par.has(k)) { par.set(k, { from: key(x, y), d }); if (sl.exit) { exitK = k; break; } q.push([sl.x, sl.y]); }
+        }
+      }
+      if (exitK === null) return { d: [0, -1] };
+      let k = exitK, first = null;
+      while (par.get(k)) { first = par.get(k).d; k = par.get(k).from; }
+      return { d: first || [0, -1] };
+    }
+
     enterCell(x, y) {
       const c = this.grid.get(x, y);
       if (c === T.SPIKE) { this.die('espinho'); return; }
@@ -425,7 +479,11 @@
     collect(x, y, c) {
       const p = this.player;
       this.grid.set(x, y, T.EMPTY);
-      if (c === T.DOT) { this.score += 10; this.dotsLeft--; this.audio.dot(); this.burst(x + 0.5, y + 0.5, 2, this.world.accent, 0.8); }
+      if (c === T.DOT) {
+        this.score += 10; this.dotsLeft--; this.audio.dot(); this.burst(x + 0.5, y + 0.5, 2, this.world.accent, 0.8);
+        this.combo = (this.t - (this.lastDotAt || -9) < 0.35) ? (this.combo || 0) + 1 : 1; this.lastDotAt = this.t;
+        if (this.kids() && this.combo > 0 && this.combo % 8 === 0) this.toastMsg(this.pick(COMBOS));
+      }
       else if (c === T.COIN) {
         const v = this.mask().perkId === 'coins2x' ? 2 : 1;
         this.levelCoins++; this.score += 100; this.save.coins += 5 * v; this.audio.coin();
@@ -462,6 +520,7 @@
       if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) { /* ignorado */ } }
       this.state = this.mode === 'arcade' ? 'arcadeover' : 'dead';
       this.buttons = [];
+      if (this.kids()) { this.deathMsg = this.pick(ANIMOS); this.speak(this.deathMsg); }
       if (this.mode === 'arcade') {
         const sc = this.arcadeScore();
         if (sc > this.save.arcadeBest) { this.save.arcadeBest = sc; this.newBest = true; } else this.newBest = false;
@@ -485,6 +544,9 @@
       this.newWorld = wasUnlocked !== this.save.unlocked && (idx + 1) % 10 === 0 && idx + 1 < root.LEVELS.length;
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
+      this.winTitle = this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
+      this.confetti = this.kids() ? 1 : 0;
+      if (this.kids()) this.speak(this.pick(ELOGIOS) + (stars === 3 ? ' Três estrelas!' : stars === 0 ? ' Tente pegar as estrelas douradas!' : ''));
     }
     restart() { if (this.mode === 'arcade') this.startArcade(); else this.startLevel(this.levelIndex); }
     nextLevel() {
@@ -620,6 +682,7 @@
         ctx.fillRect(ox + tr.x * s - k / 2, oy + tr.y * s - k / 2, k, k);
       }
       if (!p.dead) this.drawPlayer(ox + p.x * s, oy + p.y * s);
+      if (this.hint && !p.moving && this.state === 'play') this.drawHint(ox + p.x * s, oy + p.y * s, this.hint.d);
       // partículas
       for (const pt of this.particles) {
         ctx.fillStyle = pt.color; ctx.globalAlpha = clamp(pt.life * 2, 0, 1);
@@ -717,8 +780,14 @@
       ctx.fillRect(cx - bw / 2 - s * 0.18, wy - s * 0.1, s * 0.12, s * 0.1);
       ctx.fillRect(cx + bw / 2 + s * 0.06, wy - s * 0.1, s * 0.12, s * 0.1);
       ctx.shadowBlur = 0;
-      ctx.fillStyle = '#ff4040'; const e = Math.max(1, s * 0.06);
-      ctx.fillRect(cx - bw / 4 - e / 2, cy - bh / 4, e, e); ctx.fillRect(cx + bw / 4 - e / 2, cy - bh / 4, e, e);
+      if (this.kids()) { // olhos grandes e fofos
+        const e = Math.max(2, s * 0.11);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - bw / 4 - e / 2, cy - bh / 4, e, e); ctx.fillRect(cx + bw / 4 - e / 2, cy - bh / 4, e, e);
+        ctx.fillStyle = '#1a1a1a'; const pz = Math.max(1, e * 0.5); ctx.fillRect(cx - bw / 4, cy - bh / 4 + e * 0.3, pz, pz); ctx.fillRect(cx + bw / 4, cy - bh / 4 + e * 0.3, pz, pz);
+      } else {
+        ctx.fillStyle = '#ff4040'; const e = Math.max(1, s * 0.06);
+        ctx.fillRect(cx - bw / 4 - e / 2, cy - bh / 4, e, e); ctx.fillRect(cx + bw / 4 - e / 2, cy - bh / 4, e, e);
+      }
     }
     drawPlayer(cx, cy) {
       const ctx = this.ctx, s = this.tile, p = this.player, mask = this.mask();
@@ -744,9 +813,12 @@
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(-k * 0.3 + ex - eye / 2 + eye * 0.55, -k * 0.12 + ey - eye / 2 + eye * 0.1, eye * 0.3, eye * 0.3);
       ctx.fillRect(k * 0.3 + ex - eye / 2 + eye * 0.55, -k * 0.12 + ey - eye / 2 + eye * 0.1, eye * 0.3, eye * 0.3);
-      // boca
+      // boca: sorriso no modo lúdico, dentes no modo clássico
       ctx.fillStyle = mask.eye;
-      for (let i = -2; i <= 2; i++) if (i % 2 === 0) ctx.fillRect(i * k * 0.12 - k * 0.05, k * 0.22, k * 0.1, k * 0.1);
+      if (this.kids()) {
+        ctx.fillRect(-k * 0.3, k * 0.14, k * 0.08, k * 0.08); ctx.fillRect(k * 0.22, k * 0.14, k * 0.08, k * 0.08);
+        ctx.fillRect(-k * 0.22, k * 0.22, k * 0.44, k * 0.08);
+      } else for (let i = -2; i <= 2; i++) if (i % 2 === 0) ctx.fillRect(i * k * 0.12 - k * 0.05, k * 0.22, k * 0.1, k * 0.1);
       ctx.restore();
       if (p.shield > 0) {
         ctx.strokeStyle = rgba('#8cf5ff', 0.7 + 0.3 * Math.sin(this.t * 8)); ctx.lineWidth = 2;
@@ -757,6 +829,16 @@
         ctx.strokeStyle = rgba('#ff4fa3', 0.35); ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(cx, cy, 2.2 * s + Math.sin(this.t * 5) * 3, 0, Math.PI * 2); ctx.stroke();
       }
+    }
+    drawHint(cx, cy, d) {
+      const ctx = this.ctx, s = this.tile;
+      const bob = Math.sin(this.t * 6) * s * 0.15;
+      const dist = s * 1.1 + bob;
+      ctx.save(); ctx.translate(cx + d[0] * dist, cy + d[1] * dist); ctx.rotate(Math.atan2(d[1], d[0]));
+      ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 12; ctx.fillStyle = '#ffffff';
+      const a = s * 0.42;
+      ctx.beginPath(); ctx.moveTo(a * 0.6, 0); ctx.lineTo(-a * 0.3, -a * 0.55); ctx.lineTo(-a * 0.05, 0); ctx.lineTo(-a * 0.3, a * 0.55); ctx.closePath(); ctx.fill();
+      ctx.restore();
     }
     drawFluid(ox, oy) {
       const ctx = this.ctx, s = this.tile, f = this.fluid;
@@ -856,10 +938,14 @@
       this.overlay(a);
       if (this.t - this.deadAt < 0.4) return;
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
-      F.text(this.ctx, 'VOCE MORREU', cx, cy - u * 20, u * 2, '#ff3b3b', 'center', { shadow: '#400' });
-      const causes = { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU' };
+      const kids = this.kids();
+      F.text(this.ctx, kids ? 'OPA!' : 'VOCE MORREU', cx, cy - u * 20, u * 2, kids ? '#ffd23f' : '#ff3b3b', 'center', { shadow: kids ? '#7a3a00' : '#400' });
+      const causes = kids
+        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA TE ACERTOU', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU' }
+        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU' };
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
-      if (Math.floor(this.t * 2) % 2 === 0) F.text(this.ctx, 'TOQUE PARA TENTAR DE NOVO', cx, cy + u * 14, u, '#ffd23f', 'center');
+      if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
+      if (Math.floor(this.t * 2) % 2 === 0) F.text(this.ctx, 'TOQUE PARA TENTAR DE NOVO', cx, cy + u * 16, u, '#ffd23f', 'center');
       const w = Math.min(this.W * 0.8, 320);
       this.drawButton('⌂ MENU', cx, cy + u * 36, w, () => { this.audio.stopMusic(); this.goto('levels'); }, null, 'd1');
     }
@@ -869,7 +955,7 @@
       if (k < 0.3) return;
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
       F.text(this.ctx, 'FASE ' + this.level.n, cx, cy - u * 44, u, this.world.accent, 'center');
-      F.text(this.ctx, 'COMPLETA!', cx, cy - u * 32, u * 2, '#ffffff', 'center', { shadow: this.world.color });
+      F.text(this.ctx, this.winTitle || 'COMPLETA!', cx, cy - u * 32, u * 2, '#ffffff', 'center', { shadow: this.world.color });
       // estrelas animadas
       for (let i = 0; i < 3; i++) {
         const shown = this.t - this.winAt > 0.6 + i * 0.35;
@@ -921,6 +1007,7 @@
       this.drawButton('ARCADE', cx, by + u * 16, w, () => { this.startArcade(); }, '#ff3b3b', 't2');
       this.drawButton('MASCARAS  $' + this.save.coins, cx, by + u * 32, w, () => this.goto('shop'), '#ffd23f', 't3');
       this.drawButton('⚙ OPCOES', cx, by + u * 48, w, () => this.goto('settings'), '#8cf5ff', 't4');
+      this.drawButton(this.kids() ? '\u2665 MODO: LUDICO' : 'MODO: CLASSICO', cx, by + u * 64, w, () => { this.save.kids = !this.save.kids; Save.write(); this.buttons = []; if (this.save.kids) this.speak('Modo lúdico ligado!'); }, this.kids() ? '#ff4fa3' : '#888899', 't5');
       F.text(ctx, 'RECORDE ARCADE ' + this.save.arcadeBest + '   FASES ' + Math.min(this.save.unlocked - 1, root.LEVELS.length) + '/' + root.LEVELS.length, cx, this.H - u * 9 - 8, Math.max(1, u - 1), '#888899', 'center');
       this.buttons = this.buttons.filter((b) => b.id !== 'pause');
     }
@@ -947,7 +1034,9 @@
       ctx.fillStyle = mask.eye;
       ctx.fillRect(-k * 0.3 - eye / 2, -k * 0.12 - eye / 2, eye, eye * blink); ctx.fillRect(k * 0.3 - eye / 2, -k * 0.12 - eye / 2, eye, eye * blink);
       ctx.fillStyle = '#fff'; if (blink === 1) { ctx.fillRect(-k * 0.3 + eye * 0.05, -k * 0.12 - eye * 0.4, eye * 0.3, eye * 0.3); ctx.fillRect(k * 0.3 + eye * 0.05, -k * 0.12 - eye * 0.4, eye * 0.3, eye * 0.3); }
-      ctx.fillStyle = mask.eye; for (let i = -2; i <= 2; i += 2) ctx.fillRect(i * k * 0.12 - k * 0.05, k * 0.22, k * 0.1, k * 0.1);
+      ctx.fillStyle = mask.eye;
+      if (this.kids()) { ctx.fillRect(-k * 0.3, k * 0.14, k * 0.08, k * 0.08); ctx.fillRect(k * 0.22, k * 0.14, k * 0.08, k * 0.08); ctx.fillRect(-k * 0.22, k * 0.22, k * 0.44, k * 0.08); }
+      else for (let i = -2; i <= 2; i += 2) ctx.fillRect(i * k * 0.12 - k * 0.05, k * 0.22, k * 0.1, k * 0.1);
       ctx.restore();
     }
     renderWorlds() {
@@ -1029,8 +1118,11 @@
       this.renderBackdrop('#8cf5ff');
       F.text(ctx, 'OPCOES', cx, 16, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#0f4d52' });
       const w = Math.min(this.W * 0.85, 340);
-      const top = 16 + u * 20, step = u * 7 + 32;
+      const top = 16 + u * 20, step = Math.min(u * 7 + 32, (this.H - 16 - u * 20 - u * 7 - 110) / 8);
       const opts = [
+        ['MODO LUDICO', 'kids', null],
+        ['VOZ (PT-BR)', 'voice', () => { if (this.save.voice) this.speak('Oi! Vamos jogar?'); }],
+        ['SETA DE DICA', 'hints', null],
         ['♪ MUSICA', 'music', () => this.audio.setMusic(this.save.music)],
         ['SONS', 'sfx', () => this.audio.setSfx(this.save.sfx)],
         ['EFEITO CRT', 'crt', null],
@@ -1044,8 +1136,9 @@
         else { this.confirmReset = true; this.buttons = []; }
       }, this.confirmReset ? '#ff3b3b' : '#888899', 'reset');
       if (this.confirmReset) F.text(ctx, 'TOQUE DE NOVO PARA CONFIRMAR', cx, top + opts.length * step + 10 + u * 8, Math.max(1, u - 1), '#ff3b3b', 'center');
-      F.text(ctx, 'TECLADO: SETAS OU WASD', cx, this.H - u * 30, Math.max(1, u - 1), '#888899', 'center');
-      F.text(ctx, 'P = PAUSA   R = REINICIAR', cx, this.H - u * 22, Math.max(1, u - 1), '#888899', 'center');
+      F.text(ctx, 'MODO LUDICO: VOZ, FESTA E CARINHO.', cx, this.H - u * 38, Math.max(1, u - 1), '#ff4fa3', 'center');
+      F.text(ctx, 'A DIFICULDADE E SEMPRE A MESMA.', cx, this.H - u * 30, Math.max(1, u - 1), '#ff4fa3', 'center');
+      F.text(ctx, 'TECLADO: SETAS/WASD  P=PAUSA  R=REINICIAR', cx, this.H - u * 22, Math.max(1, u - 1), '#888899', 'center');
       this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => { this.confirmReset = false; this.goto('title'); }, '#888899', 'back');
     }
   }

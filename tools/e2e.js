@@ -61,6 +61,21 @@ const { spawn } = require('child_process');
   await page.screenshot({ path: path.join(out, '5-vitoria.png') });
   console.log('fase 1:', JSON.stringify(result));
 
+  // modo lúdico: morrer em um espinho mostra "OPA!" e a fase reinicia igual
+  const ludico = await page.evaluate(async () => {
+    game.save.kids = true; game.startLevel(12);
+    const p = game.player;
+    // encontra um espinho e teleporta para a célula ao lado, depois entra nele
+    let sp = null;
+    for (let y = 0; y < LEVELS[12].rows.length && !sp; y++) { const x = LEVELS[12].rows[y].indexOf('x'); if (x >= 0) sp = [x, y]; }
+    if (!sp) return { skipped: true };
+    game.started = true; p.cx = sp[0]; p.cy = sp[1]; game.enterCell(sp[0], sp[1]);
+    await new Promise((r) => setTimeout(r, 700));
+    return { state: game.state, msg: game.deathMsg };
+  });
+  await page.screenshot({ path: path.join(out, '5b-opa.png') });
+  console.log('modo lúdico (opa):', JSON.stringify(ludico));
+
   // uma fase com lava e inimigos
   await page.evaluate(() => game.startLevel(45));
   await page.waitForTimeout(3500);
