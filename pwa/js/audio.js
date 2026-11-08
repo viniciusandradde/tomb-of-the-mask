@@ -88,15 +88,33 @@
     }
 
     // --- efeitos ---------------------------------------------------------
-    move() { this.noise({ dur: 0.08, vol: 0.12, hp: 1500, lp: 6000 }); this.tone({ type: 'triangle', freq: 220, to: 110, dur: 0.07, vol: 0.12 }); }
-    bump() { this.tone({ type: 'square', freq: 140, to: 70, dur: 0.08, vol: 0.18 }); this.noise({ dur: 0.06, vol: 0.1, hp: 300, lp: 2000 }); }
+    // "whoosh" ao partir: sopro de ruído com filtro passa-banda subindo + leve tom que sobe
+    move() {
+      if (!this.ctx) return;
+      const t0 = this.ctx.currentTime;
+      const s = this.ctx.createBufferSource(); s.buffer = this.noiseBuf;
+      const bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
+      bp.frequency.setValueAtTime(500, t0); bp.frequency.exponentialRampToValueAtTime(3800, t0 + 0.1);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.24, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
+      s.connect(bp).connect(g).connect(this.sfxGain); s.start(t0); s.stop(t0 + 0.17);
+      this.tone({ type: 'triangle', freq: 180, to: 520, dur: 0.08, vol: 0.06 });
+    }
+    // impacto seco: "thump" grave muito curto + clique agudo de 25 ms
+    bump() {
+      this.tone({ type: 'sine', freq: 120, to: 38, dur: 0.07, vol: 0.5 });
+      this.tone({ type: 'square', freq: 95, to: 45, dur: 0.035, vol: 0.12 });
+      this.noise({ dur: 0.025, vol: 0.22, hp: 2500, lp: 9000 });
+    }
+    // blip dos pontos: sobe em escala pentatônica maior (soa musical, não cromático), janela de 450 ms
     dot() {
       const now = performance.now();
-      this.comboPitch = now - this.lastDot < 350 ? Math.min(this.comboPitch + 1, 14) : 0;
+      this.comboPitch = now - this.lastDot < 450 ? Math.min(this.comboPitch + 1, 10) : 0;
       this.lastDot = now;
-      const f = NOTE(76 + this.comboPitch);
-      this.tone({ type: 'square', freq: f, dur: 0.07, vol: 0.14 });
-      this.tone({ type: 'square', freq: f * 2, dur: 0.05, vol: 0.05, at: 0.01 });
+      const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+      const f = NOTE(74 + PENTA[this.comboPitch]);
+      this.tone({ type: 'square', freq: f, to: f * 1.06, dur: 0.06, vol: 0.14, slide: 'lin' });
+      this.tone({ type: 'sine', freq: f * 2, dur: 0.045, vol: 0.06, at: 0.005 });
     }
     coin() {
       this.tone({ type: 'square', freq: NOTE(88), dur: 0.09, vol: 0.2 });
