@@ -377,10 +377,10 @@
       g[sy][o.entryX] = T.EMPTY;
       // No jogo, o chão deste bloco é o teto do bloco anterior, com a ABERTURA em
       // entryX ainda aberta: descer por ela leva o jogador de volta ao bloco de
-      // baixo, de onde "cima" o traz de volta. Modelamos isso com uma linha de
-      // chão aberta em entryX e uma linha sólida abaixo (a abertura vira uma
-      // parada da qual só se sai subindo), em vez de fingir um chão fechado.
-      const floor = T.WALL.repeat(o.w).split(''); floor[o.entryX] = T.EMPTY;
+      // baixo (onde pode haver espinhos). Modelamos a abertura como perigo:
+      // assim o solver nunca conta com essa descida nem com a volta, e nenhuma
+      // parada do bloco pode depender dela (conservador).
+      const floor = T.WALL.repeat(o.w).split(''); floor[o.entryX] = T.SPIKE;
       const withFloor = (grid) => toRows(grid).concat([floor.join(''), T.WALL.repeat(o.w)]);
       // coluna de entrada precisa estar livre para a entrada deslizante
       let rows = withFloor(g);

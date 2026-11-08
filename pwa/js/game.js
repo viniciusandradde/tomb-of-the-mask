@@ -145,6 +145,8 @@
       c.addEventListener('pointermove', (e) => {
         if (!this.pointer || !this.pointer.down) return;
         const dx = e.clientX - sx, dy = e.clientY - sy, dist = Math.hypot(dx, dy);
+        const inGame = this.state === 'play' || this.state === 'dead';
+        if (!inGame) return; // nos menus não há gesto de deslize: o toque conta ao soltar
         if (!moved) { if (dist >= SWIPE) { moved = true; swipe(dx, dy); sx = e.clientX; sy = e.clientY; } }
         else if (dist >= REARM) { swipe(dx, dy); sx = e.clientX; sy = e.clientY; }
       });
@@ -152,7 +154,8 @@
         if (!this.pointer) return;
         this.pointer.down = false;
         const dx = e.clientX - sx, dy = e.clientY - sy;
-        if (!moved && Math.hypot(dx, dy) >= FLICK && now() - st < 0.3) { moved = true; swipe(dx, dy); }
+        const inGame = this.state === 'play' || this.state === 'dead';
+        if (!moved && inGame && Math.hypot(dx, dy) >= FLICK && now() - st < 0.3) { moved = true; swipe(dx, dy); }
         if (!moved) this.tap(e.clientX, e.clientY);
         lastDir = null;
       };
@@ -400,6 +403,11 @@
       for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.life -= dt; }
       this.particles = this.particles.filter((p) => p.life > 0);
       if (this.toast) { this.toast.t -= dt; if (this.toast.t <= 0) this.toast = null; }
+      if (this.player) {
+        for (const tr of this.player.trail) tr.life -= dt;
+        this.player.trail = this.player.trail.filter((tr) => tr.life > 0);
+      }
+      if (this.pops) { for (const pp of this.pops) pp.life -= dt; this.pops = this.pops.filter((pp) => pp.life > 0); }
       if (this.confetti > 0 && this.state === 'win') {
         this.confetti -= dt / 3;
         for (let i = 0; i < 2; i++) this.particles.push({ x: Math.random() * COLS, y: this.camY - 0.5, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3, g: 2, life: 2.5, color: this.pick(['#ffd23f', '#ff4fa3', '#8cf5ff', '#7fc33a', '#ffffff']), size: 0.18 + Math.random() * 0.12 });
@@ -414,7 +422,7 @@
       // Seta de dica (opcional, desligada por padrão): aparece se a criança ficar parada
       if (this.save.hints && !p.moving && !p.dead && this.mode === 'stage') {
         if (this.idleSince == null) this.idleSince = this.t;
-        if (this.t - this.idleSince > 5 && !this.hint) this.hint = this.computeHint();
+        if (this.t - this.idleSince > 5 && !this.hint) this.hint = this.computeHint() || { none: true };
       }
       // hit-stop: congela o mundo por ~2 quadros ao bater (os efeitos continuam)
       if (this.hitStop > 0) { this.hitStop -= dt; if (this.hitStop > 0) return; dt = Math.min(dt, -this.hitStop); this.hitStop = 0; }
@@ -448,10 +456,6 @@
         }
         if (!p.moving) this.bumpFx(p.dir); // a direção na fila só parte depois do hit-stop
       }
-      for (const tr of p.trail) tr.life -= dt;
-      p.trail = p.trail.filter((tr) => tr.life > 0);
-      for (const pp of this.pops) pp.life -= dt;
-      this.pops = this.pops.filter((pp) => pp.life > 0);
 
       // ímã
       if (p.magnet > 0) {
@@ -602,7 +606,7 @@
       this.explodeSprite();
       this.burst(p.x, p.y, 12, '#ffffff', 4);
       if (this.save.shake) this.shake = 0.35;
-      this.flash = 1; this.hitStop = 0.06;
+      this.flash = 0.8;
       if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) { /* ignorado */ } }
       this.state = this.mode === 'arcade' ? 'arcadeover' : 'dead';
       this.buttons = [];
@@ -802,7 +806,7 @@
         ctx.strokeStyle = rgba(pp.color, a); ctx.lineWidth = Math.max(1, s * 0.06);
         ctx.strokeRect(ox + pp.x * s - k / 2, oy + pp.y * s - k / 2, k, k);
       }
-      if (this.hint && !p.moving && this.state === 'play') this.drawHint(ox + p.x * s, oy + p.y * s, this.hint.d);
+      if (this.hint && this.hint.d && !p.moving && this.state === 'play') this.drawHint(ox + p.x * s, oy + p.y * s, this.hint.d);
       // partículas
       for (const pt of this.particles) {
         ctx.fillStyle = pt.color; ctx.globalAlpha = clamp(pt.life * 2, 0, 1);
