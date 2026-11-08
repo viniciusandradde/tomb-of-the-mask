@@ -8,7 +8,7 @@ for (const L of self.LEVELS) {
   const v = Maze.validate(L.rows);
   const w = L.rows[0].length;
   const shapeOk = L.rows.every((r) => r.length === w) && L.rows.join('').split('S').length === 2 && L.rows.join('').split('E').length === 2;
-  if (!v.ok || !shapeOk) { bad++; console.log(`FASE ${L.n}: INVÁLIDA (${v.reason || 'formato'})`); }
+  if (!v.ok || !shapeOk) { bad++; console.log(`FASE ${L.n}: INVÁLIDA (${v.reason || 'formato'})${v.traps && v.traps.size ? ' armadilhas=' + v.traps.size : ''}`); }
 }
-console.log(`${self.LEVELS.length - bad}/${self.LEVELS.length} fases válidas`);
+console.log(`${self.LEVELS.length - bad}/${self.LEVELS.length} fases válidas (saída alcançável, coletáveis alcançáveis, nenhuma parada sem volta)`);
 process.exit(bad ? 1 : 0);

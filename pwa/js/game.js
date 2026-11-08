@@ -14,7 +14,25 @@
   function shade(h, f) { const [r, g, b] = hexToRgb(h).map((c) => clamp(Math.round(c * f), 0, 255)); return `rgb(${r},${g},${b})`; }
   const now = () => performance.now() / 1000;
 
-  const SPEED = 17;         // células por segundo (jogador)
+  const SPEED = 18;         // células por segundo (jogador) — parte já em velocidade máxima
+  // "Game feel" do deslize (valores em células e segundos)
+  const FX = {
+    trailStep: 0.14,   // a cada quantas células nasce uma cópia (afterimage) do sprite
+    trailLife: 0.16,   // s de vida de cada cópia
+    trailMax: 12,      // máximo de cópias vivas
+    trailAlpha: 0.55,  // alfa inicial da cópia (somado com 'lighter' = brilho)
+    stretch: 0.22,     // alongamento no eixo do movimento (22%)
+    stretchIn: 0.05,   // s para o alongamento chegar ao máximo
+    squash: 0.38,      // achatamento máximo contra a parede (38%)
+    squashDur: 0.13,   // s de duração do achatamento
+    shakeDur: 0.07,    // s de tremor ao bater
+    shakeAmp: 5,       // px de amplitude do tremor ao bater
+    hitStop: 0.03,     // s de "hit-stop" ao bater (~2 quadros a 60 fps)
+    camLead: 1.4,      // células de avanço da câmera na direção do movimento
+    camRate: 9,        // rapidez da câmera (1/s); maior = mais colada
+    dust: 7,           // partículas de poeira por batida
+    dustSpeed: 3.5,    // células/s da poeira
+  };
   const BAT_SPEED = 3.2;    // células por segundo
   const SHOT_SPEED = 9;
   const SHOT_PERIOD = 2.2;
@@ -110,24 +128,33 @@
     // ------------------------------------------------------------ entrada
     bindInput() {
       const c = this.canvas;
-      let sx = 0, sy = 0, st = 0, moved = false;
+      const SWIPE = 10;   // px até reconhecer o deslize (era 24)
+      const FLICK = 6;    // px: ao soltar, um gesto maior que isto já conta como deslize (flick curto)
+      const REARM = 28;   // px: arrastando sem soltar, uma nova direção dispara de novo
+      let sx = 0, sy = 0, st = 0, moved = false, lastDir = null;
+      const swipe = (dx, dy) => {
+        const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+        if (dir !== lastDir) { lastDir = dir; this.input(dir); }
+      };
       c.addEventListener('pointerdown', (e) => {
         e.preventDefault(); this.audio.unlock();
-        sx = e.clientX; sy = e.clientY; st = now(); moved = false;
+        try { c.setPointerCapture(e.pointerId); } catch (err) { /* opcional */ }
+        sx = e.clientX; sy = e.clientY; st = now(); moved = false; lastDir = null;
         this.pointer = { x: e.clientX, y: e.clientY, down: true };
       });
       c.addEventListener('pointermove', (e) => {
         if (!this.pointer || !this.pointer.down) return;
-        const dx = e.clientX - sx, dy = e.clientY - sy;
-        if (!moved && Math.hypot(dx, dy) > 24) {
-          moved = true;
-          if (Math.abs(dx) > Math.abs(dy)) this.input(dx > 0 ? 'right' : 'left'); else this.input(dy > 0 ? 'down' : 'up');
-        }
+        const dx = e.clientX - sx, dy = e.clientY - sy, dist = Math.hypot(dx, dy);
+        if (!moved) { if (dist >= SWIPE) { moved = true; swipe(dx, dy); sx = e.clientX; sy = e.clientY; } }
+        else if (dist >= REARM) { swipe(dx, dy); sx = e.clientX; sy = e.clientY; }
       });
       const up = (e) => {
         if (!this.pointer) return;
         this.pointer.down = false;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!moved && Math.hypot(dx, dy) >= FLICK && now() - st < 0.3) { moved = true; swipe(dx, dy); }
         if (!moved) this.tap(e.clientX, e.clientY);
+        lastDir = null;
       };
       c.addEventListener('pointerup', up);
       c.addEventListener('pointercancel', up);
@@ -271,8 +298,9 @@
       this.grid.set(s[0], s[1], T.EMPTY);
       this.player = {
         cx: s[0], cy: s[1], x: s[0] + 0.5, y: s[1] + 0.5, dir: null, moving: false, queued: null,
-        shield: 0, magnet: 0, freeze: 0, invul: 0, dead: false, face: [0, -1], squash: 0, trail: [],
+        shield: 0, magnet: 0, freeze: 0, invul: 0, dead: false, face: [0, -1], squash: 0, stretch: 0, trail: [], trailDist: 0, bumpDir: null,
       };
+      this.pops = []; this.hitStop = 0; this.camLead = 0;
       const mask = this.mask();
       if (mask.perkId === 'shield') this.player.shield = 1;
       if (mask.perkId === 'magnet') this.player.magnet = Infinity;
@@ -328,16 +356,30 @@
       while (!M.isSolid(this.grid.get(tx + d[0], ty + d[1]))) { tx += d[0]; ty += d[1]; if (Math.abs(tx - p.cx) + Math.abs(ty - p.cy) > 200) break; }
       if (tx === p.cx && ty === p.cy) { this.bumpFx(d); return; }
       p.dir = d; p.face = d; p.moving = true; p.tx = tx; p.ty = ty; p.queued = null;
+      p.stretch = 0; p.trailDist = FX.trailStep; // primeira cópia nasce já no primeiro passo
       this.moves++; this.idleSince = this.t; this.hint = null;
       if (!this.started) { this.started = true; this.timeStart = now(); }
       this.audio.move();
     }
     bumpFx(d) {
+      const p = this.player;
       this.audio.bump();
-      if (this.save.shake) this.shake = Math.max(this.shake, 0.12);
-      this.player.squash = 1;
-      this.player.bumpDir = d;
-      this.burst(this.player.x + d[0] * 0.5, this.player.y + d[1] * 0.5, 5, this.world.accent, 1.5);
+      if (this.save.shake) this.shake = Math.max(this.shake, FX.shakeDur);
+      this.hitStop = Math.max(this.hitStop, FX.hitStop);
+      p.squash = 1; p.bumpDir = d; p.stretch = 0;
+      // poeira: nasce na face da parede e se espalha ao longo dela, com leve rebote
+      const wx = p.x + d[0] * 0.5, wy = p.y + d[1] * 0.5;
+      const col = shade(this.worldAtRow(p.cy + d[1]).color, 1.6);
+      for (let i = 0; i < FX.dust; i++) {
+        const along = (Math.random() - 0.5) * 0.8;
+        const back = (0.3 + Math.random() * 0.7) * FX.dustSpeed;
+        const side = (Math.random() - 0.5) * 2 * FX.dustSpeed;
+        this.particles.push({
+          x: wx + d[1] * along, y: wy + d[0] * along,
+          vx: -d[0] * back + d[1] * side, vy: -d[1] * back + d[0] * side,
+          g: 1.5, life: 0.16 + Math.random() * 0.2, color: i % 3 ? col : '#ffffff', size: 0.06 + Math.random() * 0.08,
+        });
+      }
     }
 
     // ------------------------------------------------------------ atualização
@@ -354,7 +396,7 @@
 
     updateFx(dt) {
       this.shake = Math.max(0, this.shake - dt);
-      this.flash = Math.max(0, this.flash - dt * 3);
+      this.flash = Math.max(0, this.flash - dt * 7);
       for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.life -= dt; }
       this.particles = this.particles.filter((p) => p.life > 0);
       if (this.toast) { this.toast.t -= dt; if (this.toast.t <= 0) this.toast = null; }
@@ -374,7 +416,11 @@
         if (this.idleSince == null) this.idleSince = this.t;
         if (this.t - this.idleSince > 5 && !this.hint) this.hint = this.computeHint();
       }
-      p.squash = Math.max(0, p.squash - dt * 6);
+      // hit-stop: congela o mundo por ~2 quadros ao bater (os efeitos continuam)
+      if (this.hitStop > 0) { this.hitStop -= dt; if (this.hitStop > 0) return; dt = Math.min(dt, -this.hitStop); this.hitStop = 0; }
+      p.squash = Math.max(0, p.squash - dt / FX.squashDur);
+      p.stretch = p.moving ? Math.min(1, p.stretch + dt / FX.stretchIn) : Math.max(0, p.stretch - dt / 0.06);
+      if (!p.moving && p.queued && !p.dead) { const q = p.queued; p.queued = null; this.beginMove(q); }
       p.invul = Math.max(0, p.invul - dt);
       if (p.freeze > 0) p.freeze -= dt;
       if (p.magnet > 0 && p.magnet !== Infinity) p.magnet -= dt;
@@ -392,15 +438,20 @@
           }
           const ncx = Math.floor(p.x), ncy = Math.floor(p.y);
           if (ncx !== p.cx || ncy !== p.cy) { p.cx = ncx; p.cy = ncy; this.enterCell(ncx, ncy); if (this.state !== 'play') return; }
-          if (this.t - (p.lastTrail || 0) > 0.016) { p.trail.push({ x: p.x, y: p.y, life: 0.25 }); p.lastTrail = this.t; }
+          // cópias do sprite por distância percorrida (independe do fps)
+          p.trailDist += step;
+          if (p.trailDist >= FX.trailStep) {
+            p.trailDist -= FX.trailStep;
+            p.trail.push({ x: p.x, y: p.y, dir: p.dir, life: FX.trailLife });
+            if (p.trail.length > FX.trailMax) p.trail.shift();
+          }
         }
-        if (!p.moving) {
-          this.bumpFx(p.dir);
-          if (p.queued) { const q = p.queued; p.queued = null; this.beginMove(q); }
-        }
+        if (!p.moving) this.bumpFx(p.dir); // a direção na fila só parte depois do hit-stop
       }
       for (const tr of p.trail) tr.life -= dt;
       p.trail = p.trail.filter((tr) => tr.life > 0);
+      for (const pp of this.pops) pp.life -= dt;
+      this.pops = this.pops.filter((pp) => pp.life > 0);
 
       // ímã
       if (p.magnet > 0) {
@@ -466,10 +517,17 @@
         this.extendArcade();
       }
 
-      // câmera
-      const target = p.y - this.viewRows() * 0.55;
+      // câmera: segue com suavidade e avança (lead) na direção vertical do movimento
+      const wantLead = p.moving ? p.dir[1] * FX.camLead : 0;
+      this.camLead = lerp(this.camLead, wantLead, 1 - Math.exp(-(p.moving ? 12 : 5) * dt));
+      const target = p.y + this.camLead - this.viewRows() * 0.55;
       const minCam = this.grid.minY, maxCam = this.grid.maxY + 1 - this.viewRows();
-      this.camY = lerp(this.camY, this.mode === 'arcade' ? target : clamp(target, Math.min(minCam, maxCam), Math.max(minCam, maxCam)), 1 - Math.pow(0.001, dt));
+      if (this.mode === 'stage' && this.grid.maxY - this.grid.minY + 1 <= this.viewRows()) {
+        // fase cabe inteira na tela: câmera fixa e centralizada
+        this.camY = lerp(this.camY, (this.grid.minY + this.grid.maxY + 1) / 2 - this.viewRows() / 2, 1 - Math.exp(-FX.camRate * dt));
+      } else {
+        this.camY = lerp(this.camY, this.mode === 'arcade' ? target : clamp(target, Math.min(minCam, maxCam), Math.max(minCam, maxCam)), 1 - Math.exp(-FX.camRate * dt));
+      }
     }
 
     // Próximo movimento do caminho mais curto a partir da posição atual
@@ -490,7 +548,7 @@
           if (!par.has(k)) { par.set(k, { from: key(x, y), d }); if (sl.exit) { exitK = k; break; } q.push([sl.x, sl.y]); }
         }
       }
-      if (exitK === null) return { d: [0, -1] };
+      if (exitK === null) return null; // sem caminho: não aponta para lugar nenhum
       let k = exitK, first = null;
       while (par.get(k)) { first = par.get(k).d; k = par.get(k).from; }
       return { d: first || [0, -1] };
@@ -506,7 +564,9 @@
       const p = this.player;
       this.grid.set(x, y, T.EMPTY);
       if (c === T.DOT) {
-        this.score += 10; this.dotsLeft--; this.audio.dot(); this.burst(x + 0.5, y + 0.5, 2, this.world.accent, 0.8);
+        this.score += 10; this.dotsLeft--; this.audio.dot();
+        this.pops.push({ x: x + 0.5, y: y + 0.5, life: 0.16, color: this.worldAtRow(y).accent });
+        this.burst(x + 0.5, y + 0.5, 3, this.worldAtRow(y).accent, 1.2);
         this.combo = (this.t - (this.lastDotAt || -9) < 0.35) ? (this.combo || 0) + 1 : 1; this.lastDotAt = this.t;
         if (this.kids() && this.combo > 0 && this.combo % 8 === 0) this.toastMsg(this.pick(COMBOS));
       }
@@ -539,10 +599,10 @@
       p.dead = true; p.moving = false; p.queued = null;
       this.deathCause = cause;
       this.audio.death();
-      this.burst(p.x, p.y, 40, this.mask().color, 5);
-      this.burst(p.x, p.y, 20, '#ffffff', 4);
-      if (this.save.shake) this.shake = 0.5;
-      this.flash = 1;
+      this.explodeSprite();
+      this.burst(p.x, p.y, 12, '#ffffff', 4);
+      if (this.save.shake) this.shake = 0.35;
+      this.flash = 1; this.hitStop = 0.06;
       if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) { /* ignorado */ } }
       this.state = this.mode === 'arcade' ? 'arcadeover' : 'dead';
       this.buttons = [];
@@ -580,6 +640,20 @@
       else this.goto('title');
     }
 
+    // Explode o sprite do jogador em blocos 8x8 com as cores reais de cada pixel
+    explodeSprite() {
+      const p = this.player, spr = this.playerSprite();
+      const N = 8, c = document.createElement('canvas'); c.width = N; c.height = N;
+      const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+      x.drawImage(spr.canvas, spr.pad, spr.pad, spr.size, spr.size, 0, 0, N, N);
+      const d = x.getImageData(0, 0, N, N).data;
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+        const o = (j * N + i) * 4; if (d[o + 3] < 60) continue;
+        const ox = (i + 0.5) / N - 0.5, oy = (j + 0.5) / N - 0.5;    // posição relativa no sprite (−0.5..0.5)
+        const ang = Math.atan2(oy, ox) + (Math.random() - 0.5) * 0.8, sp = 2 + Math.random() * 5;
+        this.particles.push({ x: p.x + ox * 0.8, y: p.y + oy * 0.8, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 1.5, g: 9, life: 0.45 + Math.random() * 0.5, color: `rgb(${d[o]},${d[o + 1]},${d[o + 2]})`, size: 0.8 / N });
+      }
+    }
     burst(x, y, n, color, power) {
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2, s = (0.5 + Math.random()) * power;
@@ -665,7 +739,13 @@
       const ctx = this.ctx, s = this.tile, w = this.world;
       this.renderBackdrop(w.color, 'bg-' + w.id);
       ctx.save();
-      if (this.shake > 0) { const k = this.shake * 12; ctx.translate((Math.random() - 0.5) * k, (Math.random() - 0.5) * k); }
+      if (this.shake > 0) {
+        // batida: tremor curto e seco, mais forte no eixo do impacto; morte: tremor longo
+        const d = this.player.bumpDir || [0, 1], big = this.shake > FX.shakeDur + 0.01;
+        const k = big ? this.shake * 12 : FX.shakeAmp * (this.shake / FX.shakeDur);
+        const r = (Math.random() - 0.5) * 2;
+        ctx.translate(big ? (Math.random() - 0.5) * k : d[0] * k * r + (Math.random() - 0.5) * k * 0.4, big ? (Math.random() - 0.5) * k : d[1] * k * r + (Math.random() - 0.5) * k * 0.4);
+      }
       const ox = this.ox, oy = -this.camY * s;
       const y0 = Math.floor(this.camY) - 1, y1 = Math.ceil(this.camY + this.viewRows()) + 1;
       // paredes
@@ -703,12 +783,25 @@
       for (const b of this.bats) this.drawBat(ox + b.x * s, oy + b.y * s, b, this.player.freeze > 0);
       // rastro + jogador
       const p = this.player;
-      for (const tr of p.trail) {
-        ctx.fillStyle = rgba(this.mask().color, tr.life * 1.6);
-        const k = s * (0.4 + tr.life);
-        ctx.fillRect(ox + tr.x * s - k / 2, oy + tr.y * s - k / 2, k, k);
+      if (p.trail.length) {
+        const spr = this.playerSprite();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; // soma de luz = brilho sem shadowBlur
+        for (const tr of p.trail) {
+          const a = tr.life / FX.trailLife;                    // 1 → 0
+          ctx.globalAlpha = a * a * FX.trailAlpha;
+          const k = 1 + FX.stretch * a, q = 1 - 0.35 * (1 - a); // mantém o alongamento e encolhe ao sumir
+          const sw = (tr.dir[0] ? k : q) * spr.canvas.width, sh = (tr.dir[1] ? k : q) * spr.canvas.height;
+          ctx.drawImage(spr.canvas, ox + tr.x * s - sw / 2, oy + tr.y * s - sh / 2, sw, sh);
+        }
+        ctx.restore();
       }
       if (!p.dead) this.drawPlayer(ox + p.x * s, oy + p.y * s);
+      // "pop" dos pontos coletados: quadrado que se expande e some
+      for (const pp of this.pops) {
+        const a = pp.life / 0.16, k = s * (0.25 + (1 - a) * 0.7);
+        ctx.strokeStyle = rgba(pp.color, a); ctx.lineWidth = Math.max(1, s * 0.06);
+        ctx.strokeRect(ox + pp.x * s - k / 2, oy + pp.y * s - k / 2, k, k);
+      }
       if (this.hint && !p.moving && this.state === 'play') this.drawHint(ox + p.x * s, oy + p.y * s, this.hint.d);
       // partículas
       for (const pt of this.particles) {
@@ -719,7 +812,7 @@
       // lava / água
       if (this.fluid) this.drawFluid(ox, oy);
       ctx.restore();
-      if (this.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${this.flash * 0.5})`; ctx.fillRect(0, 0, this.W, this.H); }
+      if (this.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(1, this.flash * 1.2) * 0.85})`; ctx.fillRect(0, 0, this.W, this.H); }
       // laterais fora do labirinto (desktop)
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       if (ox > 0) { ctx.fillRect(0, 0, ox, this.H); ctx.fillRect(ox + COLS * s, 0, this.W - ox - COLS * s, this.H); }
@@ -816,13 +909,56 @@
         ctx.fillRect(cx - bw / 4 - e / 2, cy - bh / 4, e, e); ctx.fillRect(cx + bw / 4 - e / 2, cy - bh / 4, e, e);
       }
     }
+    // Sprite da máscara desenhado uma vez (por máscara, tamanho, modo e direção do olhar) em um canvas
+    // auxiliar, com o brilho já "assado". Serve para o jogador, para as cópias do rastro e para a explosão.
+    playerSprite() {
+      const s = this.tile, mask = this.mask(), p = this.player, kids = this.kids();
+      const key = [mask.id, s, kids ? 'k' : 'c', p.face[0], p.face[1]].join('|');
+      this.sprites = this.sprites || {};
+      if (this.sprites[key]) return this.sprites[key];
+      const k = s * 0.8, pad = Math.ceil(s * 0.35), size = Math.ceil(k);
+      const c = document.createElement('canvas'); c.width = c.height = size + pad * 2;
+      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      ctx.translate(pad + size / 2, pad + size / 2);
+      ctx.shadowColor = mask.color; ctx.shadowBlur = s * 0.35;
+      ctx.fillStyle = mask.color; ctx.fillRect(-k / 2, -k / 2, k, k);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = shade(mask.color, 0.75);
+      ctx.fillRect(-k / 2, k * 0.3, k, k * 0.2);
+      ctx.fillRect(-k * 0.08, -k / 2, k * 0.16, k * 0.25);
+      const ex = p.face[0] * k * 0.08, ey = p.face[1] * k * 0.08, eye = k * 0.2;
+      ctx.fillStyle = mask.eye;
+      ctx.fillRect(-k * 0.3 + ex - eye / 2, -k * 0.12 + ey - eye / 2, eye, eye);
+      ctx.fillRect(k * 0.3 + ex - eye / 2, -k * 0.12 + ey - eye / 2, eye, eye);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-k * 0.3 + ex - eye / 2 + eye * 0.55, -k * 0.12 + ey - eye / 2 + eye * 0.1, eye * 0.3, eye * 0.3);
+      ctx.fillRect(k * 0.3 + ex - eye / 2 + eye * 0.55, -k * 0.12 + ey - eye / 2 + eye * 0.1, eye * 0.3, eye * 0.3);
+      ctx.fillStyle = mask.eye;
+      if (kids) {
+        ctx.fillRect(-k * 0.3, k * 0.14, k * 0.08, k * 0.08); ctx.fillRect(k * 0.22, k * 0.14, k * 0.08, k * 0.08);
+        ctx.fillRect(-k * 0.22, k * 0.22, k * 0.44, k * 0.08);
+      } else for (let i = -2; i <= 2; i++) if (i % 2 === 0) ctx.fillRect(i * k * 0.12 - k * 0.05, k * 0.22, k * 0.1, k * 0.1);
+      const spr = { canvas: c, pad, size };
+      if (Object.keys(this.sprites).length > 40) this.sprites = {}; // nunca cresce sem limite
+      this.sprites[key] = spr;
+      return spr;
+    }
     drawPlayer(cx, cy) {
       const ctx = this.ctx, s = this.tile, p = this.player, mask = this.mask();
-      let sx = 1, sy = 1;
-      if (p.squash > 0 && p.bumpDir) { const k = p.squash * 0.25; if (p.bumpDir[0]) { sx = 1 - k; sy = 1 + k; } else { sx = 1 + k; sy = 1 - k; } }
-      if (p.moving) { if (p.dir[0]) { sx = 1.15; sy = 0.88; } else { sx = 0.88; sy = 1.15; } }
+      let sx = 1, sy = 1, dx = 0, dy = 0;
+      if (p.moving) {
+        // estica no eixo do movimento (sobe rápido nos primeiros 50 ms)
+        const k = FX.stretch * p.stretch;
+        if (p.dir[0]) { sx = 1 + k; sy = 1 - k * 0.6; } else { sy = 1 + k; sx = 1 - k * 0.6; }
+      } else if (p.squash > 0 && p.bumpDir) {
+        // achata contra a parede, ancorado na face da parede; libera com leve "rebote"
+        const e = p.squash * p.squash, k = FX.squash * e;
+        const d = p.bumpDir;
+        if (d[0]) { sx = 1 - k; sy = 1 + k * 0.8; } else { sy = 1 - k; sx = 1 + k * 0.8; }
+        dx = d[0] * k * s * 0.4; dy = d[1] * k * s * 0.4;
+      }
       const k = s * 0.8;
-      ctx.save(); ctx.translate(cx, cy); ctx.scale(sx, sy);
+      ctx.save(); ctx.translate(cx + dx, cy + dy); ctx.scale(sx, sy);
       if (p.invul > 0 && Math.floor(this.t * 20) % 2 === 0) ctx.globalAlpha = 0.4;
       ctx.shadowColor = mask.color; ctx.shadowBlur = 12;
       ctx.fillStyle = mask.color; ctx.fillRect(-k / 2, -k / 2, k, k);

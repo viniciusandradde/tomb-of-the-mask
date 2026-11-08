@@ -72,7 +72,7 @@
   function key(x, y) { return y * 1000 + x; }
 
   // Busca em largura sobre células de parada.
-  function solve(rows, start) {
+  function solve(rows, start, forbidStop) {
     const s = start || find(rows, T.SPAWN);
     if (!s) return { solvable: false, reason: 'sem spawn' };
     const startKey = key(s[0], s[1]);
@@ -80,11 +80,13 @@
     const parent = new Map();
     const passable = new Set([startKey]);
     const touched = new Set([startKey]); // inclui células de caminhos mortais
+    const edges = new Map(); // parada -> paradas seguras alcançáveis em 1 movimento
     const queue = [s];
     let exitKey = null, moves = Infinity;
     while (queue.length) {
       const [x, y] = queue.shift();
       const d = dist.get(key(x, y));
+      const out = []; edges.set(key(x, y), out);
       for (const [dx, dy] of DIRS) {
         const r = slide(rows, x, y, dx, dy);
         for (const [px, py] of r.path) touched.add(key(px, py));
@@ -92,6 +94,8 @@
         for (const [px, py] of r.path) passable.add(key(px, py));
         if (r.path.length === 0) continue;
         const k = key(r.x, r.y);
+        if (forbidStop !== undefined && k === forbidStop) continue;
+        out.push(k);
         if (!dist.has(k)) {
           dist.set(k, d + 1);
           parent.set(k, { from: key(x, y), path: r.path });
@@ -109,8 +113,21 @@
         k = p.from;
       }
     }
+    // Paradas-armadilha: alcançáveis com segurança, mas das quais a saída
+    // não é mais alcançável (todo movimento é parede, espinho ou volta ao bolsão).
+    const traps = new Set();
+    if (exitKey !== null) {
+      const rev = new Map();
+      for (const [a, outs] of edges) for (const b of outs) { if (!rev.has(b)) rev.set(b, []); rev.get(b).push(a); }
+      const good = new Set([exitKey]); const stack = [exitKey];
+      while (stack.length) { const k = stack.pop(); for (const p of rev.get(k) || []) if (!good.has(p)) { good.add(p); stack.push(p); } }
+      for (const k of dist.keys()) if (!good.has(k)) traps.add(k);
+    }
     return {
       solvable: exitKey !== null,
+      fair: exitKey !== null && traps.size === 0,
+      traps,
+      startKey, exitKey,
       moves: exitKey !== null ? moves : Infinity,
       stops: dist,          // células onde o jogador pode parar -> distância em movimentos
       passable,             // células que podem ser atravessadas com segurança
@@ -123,6 +140,7 @@
   function validate(rows) {
     const res = solve(rows);
     if (!res.solvable) return { ok: false, reason: 'saída inalcançável', ...res };
+    if (!res.fair) return { ok: false, reason: 'parada sem volta (armadilha)', ...res };
     const unreachable = [];
     for (let y = 0; y < rows.length; y++) {
       for (let x = 0; x < rows[y].length; x++) {
@@ -174,7 +192,7 @@
       }
       let rows = toRows(g);
       let res = solve(rows);
-      if (!res.solvable || res.moves < o.minMoves || res.moves > o.maxMoves) continue;
+      if (!res.solvable || !res.fair || res.moves < o.minMoves || res.moves > o.maxMoves) continue;
 
       // espinhos: só em células atravessáveis fora do caminho mais curto, encostados em parede
       let placed = 0, tries = 0;
@@ -191,20 +209,24 @@
         const [x, y] = R.pick(cands);
         g[y][x] = T.SPIKE;
         const r2 = solve(toRows(g));
-        if (!r2.solvable || r2.moves > o.maxMoves) { g[y][x] = T.EMPTY; continue; }
+        if (!r2.solvable || !r2.fair || r2.moves > o.maxMoves) { g[y][x] = T.EMPTY; continue; }
         res = r2; placed++;
       }
 
       // atiradores: substituem paredes que olham para um corredor
+      const mandatory = mandatoryStops(toRows(g));
+      const spawnKey = key(sx, sy);
       placed = 0; tries = 0;
       while (placed < o.shooters && tries++ < 200) {
         const cands = [];
         for (let y = 1; y < o.h - 1; y++) for (let x = 1; x < o.w - 1; x++) {
           if (g[y][x] !== T.WALL) continue;
           for (const [ch, [dx, dy]] of Object.entries(SHOOTERS)) {
-            let len = 0, cx = x + dx, cy = y + dy;
-            while (g[cy] && g[cy][cx] !== undefined && !isSolid(g[cy][cx]) && g[cy][cx] !== T.SPIKE) { len++; cx += dx; cy += dy; }
-            if (len >= 4) cands.push([x, y, ch]);
+            const ray = shooterRay(g, x, y, dx, dy);
+            if (ray.length < 4) continue;
+            // justiça: não mirar o spawn nem uma parada obrigatória
+            if (ray.includes(spawnKey) || ray.some((k) => mandatory.has(k))) continue;
+            cands.push([x, y, ch]);
           }
         }
         if (!cands.length) break;
@@ -215,7 +237,7 @@
 
       rows = toRows(g);
       res = solve(rows);
-      if (!res.solvable) continue;
+      if (!res.solvable || !res.fair) continue;
 
       // pontos em todas as células atravessáveis
       const passableCells = [];
@@ -246,9 +268,10 @@
       for (let i = 0; i < o.magnets && puCands.length; i++) { const [x, y] = puCands.pop(); g[y][x] = T.MAGNET; }
 
       // morcegos horizontais: corredores livres com 4+ células
-      placeBats(g, o.bats, 1, 0, T.BAT_H, R, sx, sy);
-      placeBats(g, o.vbats, 0, 1, T.BAT_V, R, sx, sy);
+      // preencher ANTES dos morcegos: a faixa deve ser medida na geometria final
       fillUnreachable(g, res);
+      placeBats(g, o.bats, 1, 0, T.BAT_H, R, sx, sy, mandatory);
+      placeBats(g, o.vbats, 0, 1, T.BAT_V, R, sx, sy, mandatory);
 
       rows = toRows(g);
       const v = validate(rows);
@@ -258,22 +281,50 @@
     return null;
   }
 
-  function placeBats(g, n, dx, dy, ch, R, sx, sy) {
+  // Paradas obrigatórias: paradas seguras por onde TODO caminho até a saída
+  // passa (pontos de articulação do grafo de paradas). O jogador é forçado a
+  // parar nelas, portanto não podem estar na faixa de um morcego nem na linha
+  // de tiro de um atirador.
+  function mandatoryStops(rows, start) {
+    const base = solve(rows, start);
+    const out = new Set();
+    if (!base.solvable) return out;
+    for (const k of base.stops.keys()) {
+      if (k === base.startKey || k === base.exitKey) continue;
+      if (!solve(rows, start, k).solvable) out.add(k);
+    }
+    return out;
+  }
+  // Células de uma faixa de morcego (até parede/atirador/espinho dos dois lados).
+  function batLane(g, x, y, dx, dy) {
+    const cells = [key(x, y)];
+    for (const sgn of [1, -1]) {
+      let cx = x + sgn * dx, cy = y + sgn * dy;
+      while (g[cy] && g[cy][cx] !== undefined && !isSolid(g[cy][cx]) && g[cy][cx] !== T.SPIKE) { cells.push(key(cx, cy)); cx += sgn * dx; cy += sgn * dy; }
+    }
+    return cells;
+  }
+  // Células na linha de tiro de um atirador em (x,y) apontando (dx,dy).
+  function shooterRay(g, x, y, dx, dy) {
+    const cells = [];
+    let cx = x + dx, cy = y + dy;
+    while (g[cy] && g[cy][cx] !== undefined && !isSolid(g[cy][cx])) { cells.push(key(cx, cy)); cx += dx; cy += dy; }
+    return cells;
+  }
+
+  function placeBats(g, n, dx, dy, ch, R, sx, sy, forbidden) {
     let placed = 0, tries = 0;
     const h = g.length, w = g[0].length;
     while (placed < n && tries++ < 300) {
       const x = 1 + R.int(w - 2), y = 1 + R.int(h - 2);
       const c = g[y][x];
-      if (c !== T.DOT && c !== T.EMPTY) continue;
+      if (c !== T.DOT) continue; // só células atravessáveis com segurança (EMPTY = só alcançável morrendo)
       if (Math.abs(x - sx) + Math.abs(y - sy) <= 3) continue;
-      let len = 1;
-      for (let s = 1; s < 2; s++) {
-        let cx = x + dx, cy = y + dy;
-        while (!isSolid(g[cy] && g[cy][cx]) && g[cy][cx] !== T.SPIKE) { len++; cx += dx; cy += dy; }
-        cx = x - dx; cy = y - dy;
-        while (!isSolid(g[cy] && g[cy][cx]) && g[cy][cx] !== T.SPIKE) { len++; cx -= dx; cy -= dy; }
-      }
-      if (len < 4) continue;
+      const lane = batLane(g, x, y, dx, dy);
+      if (lane.length < 4) continue;
+      // justiça: a faixa não pode cobrir o spawn nem uma parada obrigatória
+      if (lane.includes(key(sx, sy))) continue;
+      if (forbidden && lane.some((k) => forbidden.has(k))) continue;
       // evita dois morcegos na mesma faixa e faixas que passam pelo spawn
       let clash = false;
       for (let cx = x - dx * 40, cy = y - dy * 40, i = 0; i <= 80; i++, cx += dx, cy += dy) {
@@ -315,20 +366,30 @@
     for (let attempt = 0; attempt < 300; attempt++) {
       // Gera um nível normal com spawn na coluna de entrada; depois remove a
       // última linha (chão) e verifica a partir do ponto onde a subida para.
-      const r = generate(Object.assign({}, o, { spawnX: o.entryX, h: o.h + 1, spikes: 0, bats: 0, vbats: 0, shooters: 0, coins: 0 }), R);
+      const r = generate(Object.assign({}, o, { spawnX: o.entryX, h: o.h + 1, spikes: 0, bats: 0, vbats: 0, shooters: 0, coins: 0, shields: 0, freezes: 0, magnets: 0 }), R);
       if (!r) continue;
       const g = toGrid(r.rows);
+      // o generate interno já pôs pontos em tudo; voltamos a EMPTY para que a
+      // colocação de espinhos/moedas/escudos abaixo tenha candidatos
+      for (const row of g) for (let x = 0; x < row.length; x++) if (row[x] === T.DOT) row[x] = T.EMPTY;
       g.pop(); // remove chão
       const sy = g.length - 1; // antiga linha do spawn
       g[sy][o.entryX] = T.EMPTY;
+      // No jogo, o chão deste bloco é o teto do bloco anterior, com a ABERTURA em
+      // entryX ainda aberta: descer por ela leva o jogador de volta ao bloco de
+      // baixo, de onde "cima" o traz de volta. Modelamos isso com uma linha de
+      // chão aberta em entryX e uma linha sólida abaixo (a abertura vira uma
+      // parada da qual só se sai subindo), em vez de fingir um chão fechado.
+      const floor = T.WALL.repeat(o.w).split(''); floor[o.entryX] = T.EMPTY;
+      const withFloor = (grid) => toRows(grid).concat([floor.join(''), T.WALL.repeat(o.w)]);
       // coluna de entrada precisa estar livre para a entrada deslizante
-      let rows = toRows(g);
+      let rows = withFloor(g);
       const up = slide(rows, o.entryX, sy + 1, 0, -1);
       if (up.path.length === 0) continue;
       const start = [up.x, up.y];
       const protectedCells = new Set(up.path.map(([x, y]) => key(x, y)));
       let res = solve(rows, start);
-      if (!res.solvable || res.moves < o.minMoves) continue;
+      if (!res.solvable || !res.fair || res.moves < o.minMoves) continue;
       // espinhos
       let placed = 0, tries = 0;
       while (placed < o.spikes && tries++ < 150) {
@@ -341,11 +402,11 @@
         if (!cands.length) break;
         const [x, y] = R.pick(cands);
         g[y][x] = T.SPIKE;
-        const r2 = solve(toRows(g), start);
-        if (!r2.solvable) { g[y][x] = T.EMPTY; continue; }
+        const r2 = solve(withFloor(g), start);
+        if (!r2.solvable || !r2.fair) { g[y][x] = T.EMPTY; continue; }
         res = r2; placed++;
       }
-      rows = toRows(g); res = solve(rows, start);
+      rows = withFloor(g); res = solve(rows, start);
       const passableCells = [];
       for (let y = 1; y < g.length; y++) for (let x = 1; x < o.w - 1; x++) {
         if (g[y][x] === T.EMPTY && res.passable.has(key(x, y))) { passableCells.push([x, y]); g[y][x] = T.DOT; }
@@ -354,10 +415,12 @@
       shuffle(coinCands, R);
       for (let i = 0; i < o.coins && coinCands.length; i++) { const [x, y] = coinCands.pop(); g[y][x] = T.COIN; }
       if (o.shields && coinCands.length && R.chance(o.shields)) { const [x, y] = coinCands.pop(); g[y][x] = T.SHIELD; }
-      placeBats(g, o.bats, 1, 0, T.BAT_H, R, start[0], start[1]);
-      placeBats(g, o.vbats, 0, 1, T.BAT_V, R, start[0], start[1]);
+      // justiça: faixa de morcego não cobre a coluna de entrada nem paradas obrigatórias
+      const forbidden = new Set([...protectedCells, ...mandatoryStops(rows, start)]);
       for (const k of protectedCells) res.touched.add(k);
-      fillUnreachable(g, res);
+      fillUnreachable(g, res); // antes dos morcegos (faixa medida na geometria final)
+      placeBats(g, o.bats, 1, 0, T.BAT_H, R, start[0], start[1], forbidden);
+      placeBats(g, o.vbats, 0, 1, T.BAT_V, R, start[0], start[1], forbidden);
       rows = toRows(g);
       const exit = find(rows, T.EXIT);
       return { rows, exitX: exit[0], start };
@@ -365,5 +428,5 @@
     return null;
   }
 
-  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, generate, generateChunk, find, key, toGrid, toRows };
+  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, find, key, toGrid, toRows };
 });

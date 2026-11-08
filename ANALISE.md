@@ -58,7 +58,16 @@ até a saída. O gerador:
 6. Tampa com parede as células que o jogador nunca poderia alcançar.
 7. Valida de novo: saída, pontos, moedas e power-ups alcançáveis.
 
-`node tools/validate.js` roda essa verificação nas 80 fases (também roda no CI antes de publicar).
+8. **Invariante de "nenhuma parada sem volta"**: de TODA posição em que o jogador pode parar com segurança, a saída
+   continua alcançável. Calculado com uma busca reversa a partir da saída sobre o grafo de paradas (`fair`/`traps` em
+   `solve`). Antes dessa regra, 46 das 80 fases tinham becos sem saída (218 paradas-armadilha, 36 delas sem nenhum
+   movimento possível), e no Arcade 22% dos blocos travavam ou matavam sem erro do jogador. Agora: 0 em 80 fases e 0 em
+   400 blocos de arcade auditados.
+9. **Justiça dos perigos**: faixa de morcego e linha de tiro de atirador nunca cobrem o ponto inicial nem uma "parada
+   obrigatória" (por onde todo caminho passa). No Arcade, o solver modela a abertura real no chão do bloco (descer por ela
+   leva ao bloco anterior, de onde se volta subindo), em vez de supor chão fechado.
+
+`node tools/validate.js` roda essas verificações nas 80 fases (também roda no CI antes de publicar).
 
 ### 3.2 Jogabilidade implementada
 
@@ -75,6 +84,18 @@ até a saída. O gerador:
   encostou, perdeu. Pontuação = altura x 10 + pontos; recorde salvo. Cada trecho é validado pelo solver.
 - Progresso, moedas, estrelas, recorde e opções salvos em `localStorage`.
 - Bônus de tempo na pontuação, contagem de movimentos vs. "par" (caminho mínimo).
+
+### 3.2.1 Sensação de movimento (copiada do original)
+
+- Parte em velocidade máxima (18 células/s) e **estica** 22% no eixo do movimento nos primeiros 50 ms.
+- Deixa um rastro de **cópias do próprio sprite** (afterimages) a cada 0,14 célula, que somem em 160 ms com brilho aditivo.
+- Ao bater: **achata** 38% contra a parede (ancorado na face da parede), poeira sai da parede, tremor curto de 70 ms no
+  eixo do impacto, "hit-stop" de 2 quadros e som seco. A próxima direção na fila parte logo depois.
+- Câmera com **avanço** (lead) de 1,4 célula na direção do movimento; fixa quando a fase cabe na tela.
+- Pontos somem com um "pop" e o blip sobe em escala pentatônica; ao morrer o sprite **explode em seus próprios pixels**
+  com flash branco curto.
+- Entrada: deslize reconhecido com 10 px (antes 24), flick curto de 6 px conta ao soltar, e arrastar em "L" sem levantar o
+  dedo enfileira a próxima direção.
 
 ### 3.3 Interface, visual e áudio
 
