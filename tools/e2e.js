@@ -126,6 +126,29 @@ const { spawn } = require('child_process');
   });
   console.log('espinhos retráteis:', JSON.stringify(trap));
 
+  // itens: escudo manual, viciado em moedas, multiplicador, máscara com imunidade
+  const itens = await page.evaluate(async () => {
+    game.save.inv.shield = 2; game.startLevel(0); game.started = true;
+    const p = game.player; const before = game.save.inv.shield;
+    game.useShield(); const afterUse = { inv: game.save.inv.shield, shield: p.shield };
+    p.addict = 5; p.boost = 5; game.save.up.boost = 3;
+    const coins0 = game.save.coins, score0 = game.score;
+    // coleta um ponto artificialmente
+    let dot = null; for (let y = game.grid.minY; y <= game.grid.maxY && !dot; y++) for (let x = 0; x < 12; x++) if (game.grid.get(x, y) === '.') { dot = [x, y]; break; }
+    game.collect(dot[0], dot[1], '.');
+    const gain = { coins: game.save.coins - coins0, score: game.score - score0, mult: game.boostMult() };
+    game.save.mask = 'pirata'; game.save.masks.push('pirata');
+    const imune = game.immune('bat'); game.save.mask = 'classica';
+    const dur = { freeze0: game.duration('freeze'), coelho: (game.save.mask = 'coelho', game.duration('freeze')) }; game.save.mask = 'classica';
+    const chest = game.rollChest(70, 3);
+    return { before, afterUse, gain, imune, dur, chest: !!chest, shopTabs: typeof game.renderShopPowers === 'function' };
+  });
+  console.log('itens:', JSON.stringify(itens));
+  await page.evaluate(() => { game.goto('shop'); }); await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(out, '8-loja.png') });
+  await page.evaluate(() => { game.shopTab = 'powers'; game.buttons = []; }); await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(out, '8b-loja-poderes.png') });
+
   // modo lúdico: morrer em um espinho mostra "OPA!" e a fase reinicia igual
   const ludico = await page.evaluate(async () => {
     game.save.kids = true; game.startLevel(12);
@@ -178,6 +201,7 @@ const { spawn } = require('child_process');
   if (result.state !== 'win') { console.log('FALHA: fase 1 não foi vencida'); process.exit(1); }
   if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play' || chefe.introState !== 'bossintro' || chefe.deathState !== 'bossdeath') { console.log('FALHA: chefão'); process.exit(1); }
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
+  if (itens.afterUse.inv !== 1 || itens.afterUse.shield !== 1 || itens.gain.coins !== 1 || itens.gain.score !== 30 || !itens.imune || itens.dur.coelho <= itens.dur.freeze0) { console.log('FALHA: itens'); process.exit(1); }
   if (morte.state !== 'dead' || morte.cause !== 'chefao') { console.log('FALHA: contato com chefe deveria matar'); process.exit(1); }
   console.log('e2e ok; capturas em', out);
 })().catch((e) => { console.error(e); process.exit(1); });

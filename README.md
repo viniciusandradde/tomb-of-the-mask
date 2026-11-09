@@ -24,7 +24,8 @@ Sem instalar nada além do Node. Também há `Dockerfile` e um workflow de GitHu
 - Mapa de mundo estilo Super Mario World (terreno, caminho de pedra, portas, tochas, decorações por mundo, personagem caminhando) com prévia de cada fase; chefões únicos com entrada cinematográfica e ataques telegrafados em fases; Chefão Mestre final para zerar o jogo.
 - Espinhos retráteis que saem dos blocos em ciclos, como no original.
 - Modo Arcade: coluna infinita para cima com espaço aberto, obstáculos e uma barreira piscante na cor do trecho que sobe em velocidade média. Encostou, perdeu.
-- 3 estrelas por fase, loja de máscaras com bônus, power-ups (escudo, congelar, ímã).
+- 3 estrelas por fase. Power-ups: Escudo (ativação manual com toque duplo), Ímã, Congelar, Viciado em Moedas e Multiplicador, melhoráveis na loja. 13 máscaras com bônus percentuais e imunidades. Baús de recompensa e Pula-fase.
+- Dificuldade crescente de verdade: mundos finais com labirintos altos e muitos perigos; chefes finais mais fortes.
 - Música chiptune e efeitos sonoros gerados em tempo real (sem arquivos de áudio).
 - **Modo Lúdico** (para crianças pequenas) e **Modo Clássico**, com a mesma dificuldade: o lúdico adiciona voz em português, elogios, confete e mensagens carinhosas; a seta de dica é opcional e vem desligada.
 - Fonte pixel art própria, efeito CRT, tremor de tela, partículas.

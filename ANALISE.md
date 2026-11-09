@@ -139,6 +139,38 @@ congelar pausa o ciclo. Legenda no mapa: `t`.
   mais. Vencê-lo mostra "VOCÊ ZEROU!" com chuva de confete e marca o jogo como zerado no salvamento.
 - Todas as arenas passam pelo mesmo validador (saída e coletáveis alcançáveis, nenhuma parada sem volta).
 
+### 3.2.3 Itens: power-ups, máscaras, baús e Pula-fase (inspirados no original)
+
+**Power-ups** (coletados no labirinto; nas fases avançadas e aleatórios no Arcade). Duração melhorável na loja em 3 níveis
+(150/300/600 moedas) e ampliada pelos bônus da máscara:
+
+| Power-up | Efeito | Duração base |
+|---|---|---|
+| Escudo | protege de um golpe; **ativação manual com toque duplo** (ou tecla E) gastando um escudo do inventário (60 moedas na loja; baús também dão) | até usar |
+| Ímã | puxa pontos e moedas num raio de 2 células | 10 s (+3 s por nível) |
+| Congelar | para morcegos, flechas, espinhos retráteis e o chefe | 6 s (+2 s) |
+| Viciado em Moedas | cada ponto coletado vira 1 moeda de ouro (os pontos ficam dourados) | 8 s (+2,5 s) |
+| Multiplicador | pontos x2 (x3 no nível máximo) | 10 s (+3 s) |
+
+**Máscaras** (13): cada uma muda a aparência e dá bônus percentuais cumulativos ou imunidades; desbloqueiam por fase alcançada
+e custam moedas: Clássica; Gatinho (fase 8: +10% moedas, +25% ímã); Pirata (fase 10: +15% moedas, imune a morcegos);
+Coelho (fase 12: +15% moedas, +30% congelar); Cachorro (loja: +10% moedas, imune a flechas); Palhaço (fase 14: +20%
+congelar e ímã); Caveira (fase 17: +25% moedas, +25% congelar, +30% viciado); Vodu (fase 20: +35%/+35%/+40%); Cavaleiro
+(loja: +2 moedas extras em cada fase); Fantasma (fase 30: ímã permanente); Rei (fase 40: moedas em dobro, +30%
+multiplicador); Sombra (fase 50: morcegos lentos, imune a espinhos retráteis); Mestre (ao zerar: +50% em tudo e escudo
+inicial).
+
+**Baús**: ao completar uma fase pela primeira vez (sempre com 2+ estrelas; 35% com menos) abre um baú com moedas, um
+escudo ou, raramente, um Pula-fase. **Pula-fase** (250 moedas ou baú): no mapa, na prévia de uma fase ainda não concluída,
+pula a fase sem estrelas e libera a próxima. Chefes não podem ser pulados.
+
+### 3.2.4 Curva de dificuldade
+
+A partir do mundo 3 a progressão aperta: altura até 44 linhas, mais paredes, espinhos (até 15 por fase), espinhos
+retráteis (até 7), morcegos (até 6), flechas (até 6), lava/água mais rápida e com menos atraso, caminhos mínimos mais
+longos. Chefes finais com mais vida (Rei das Sombras 6, Coração do Núcleo 7, Mestre 10) e ataques mais frequentes. Se um
+conjunto de parâmetros não gera fase justa, o gerador reduz os perigos em passos de 12% até conseguir.
+
 ### 3.3 Interface, visual e áudio
 
 - Tudo em canvas com fonte bitmap própria (visual autêntico de pixel art, sem baixar fontes).
