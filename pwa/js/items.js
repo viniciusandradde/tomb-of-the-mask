@@ -19,13 +19,13 @@
     { id: 'coelho', name: 'COELHO', color: '#f0f0f0', eye: '#ff4fa3', cost: 500, level: 12, coin: 15, freeze: 30, desc: '+15% MOEDAS  +30% CONGELAR' },
     { id: 'cachorro', name: 'CACHORRO', color: '#b5742a', eye: '#1a1a1a', cost: 600, level: 1, coin: 10, immune: 'arrow', desc: '+10% MOEDAS  IMUNE A FLECHAS' },
     { id: 'palhaco', name: 'PALHACO', color: '#7fc33a', eye: '#1a1a1a', cost: 700, level: 14, freeze: 20, magnet: 20, desc: '+20% CONGELAR  +20% IMA' },
-    { id: 'caveira', name: 'CAVEIRA', color: '#d8d8e0', eye: '#05030a', cost: 900, level: 17, coin: 25, freeze: 25, addict: 30, desc: '+25% MOEDAS +25% CONGELAR +30% VICIADO' },
-    { id: 'vodu', name: 'VODU', color: '#5e2a8a', eye: '#8cf5ff', cost: 1200, level: 20, coin: 35, freeze: 35, addict: 40, desc: '+35% MOEDAS +35% CONGELAR +40% VICIADO' },
+    { id: 'caveira', name: 'CAVEIRA', color: '#d8d8e0', eye: '#05030a', cost: 900, level: 17, coin: 25, freeze: 25, addict: 30, desc: '+25% MOEDAS +25% CONG. +30% VIC.' },
+    { id: 'vodu', name: 'VODU', color: '#5e2a8a', eye: '#8cf5ff', cost: 1200, level: 20, coin: 35, freeze: 35, addict: 40, desc: '+35% MOEDAS +35% CONG. +40% VIC.' },
     { id: 'cavaleiro', name: 'CAVALEIRO', color: '#8fa3b8', eye: '#1a1a1a', cost: 1500, level: 1, extraCoins: 2, desc: '+2 MOEDAS EXTRAS EM CADA FASE' },
     { id: 'fantasma', name: 'FANTASMA', color: '#8cf5ff', eye: '#0a2a33', cost: 1600, level: 30, permaMagnet: true, desc: 'IMA DE PONTOS PERMANENTE' },
-    { id: 'rei', name: 'REI', color: '#f5c542', eye: '#4a3a00', cost: 2000, level: 40, coin: 100, boost: 30, desc: 'MOEDAS EM DOBRO  +30% MULTIPLICADOR' },
-    { id: 'sombra', name: 'SOMBRA', color: '#b04cff', eye: '#eaffff', cost: 2500, level: 50, slowBats: true, immune: 'trap', desc: 'MORCEGOS LENTOS  IMUNE A ESPINHOS MOVEIS' },
-    { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 81, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU O JOGO: +50% EM TUDO E ESCUDO INICIAL' },
+    { id: 'rei', name: 'REI', color: '#f5c542', eye: '#4a3a00', cost: 2000, level: 40, coin: 100, boost: 30, desc: 'MOEDAS X2  +30% MULTIPLICADOR' },
+    { id: 'sombra', name: 'SOMBRA', color: '#b04cff', eye: '#eaffff', cost: 2500, level: 50, slowBats: true, immune: 'trap', desc: 'MORCEGOS LENTOS  IMUNE A ESP. MOVEIS' },
+    { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 81, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU: +50% EM TUDO E ESCUDO INICIAL' },
   ];
   root.MASKS = MASKS;
 
@@ -78,7 +78,7 @@
   G.drawItemsHud = function () {
     const ctx = this.ctx, u = this.ui, p = this.player, pad = 8;
     const small = Math.max(1, u - 1);
-    let y = this.H - u * 7 - pad - (this.boss && !this.boss.dead ? u * 7 + 34 : 0);
+    let y = this.H - u * 7 - pad - 10 - (u * 7 + 18) - (this.boss && !this.boss.dead ? u * 7 + 34 : 0);
     const active = [];
     if (p.freeze > 0) active.push(['CONGELADO', p.freeze, this.duration('freeze'), '#9ad8ff']);
     if (p.magnet > 0 && p.magnet !== Infinity) active.push(['IMA', p.magnet, this.duration('magnet'), '#ff4fa3']);
@@ -207,10 +207,10 @@
       const lvl = this.save.up[pw.id] || 0, y = top + 10 + i * (h + 6), x = cx - w / 2;
       ctx.fillStyle = rgba(pw.color, 0.12); ctx.fillRect(x, y, w, h);
       ctx.strokeStyle = pw.color; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-      this.drawPowerup(x + 8, y + h / 2 - u * 3, pw.color, { magnet: 'U', freeze: '*', addict: '$', boost: 'X' }[pw.id], 0.5);
-      F.text(ctx, pw.name, x + u * 9, y + 7, u, '#ffffff', 'left');
-      F.text(ctx, pw.desc, x + u * 9, y + 7 + u * 8, small, '#aaaaaa', 'left');
-      F.text(ctx, 'DURACAO ' + this.duration(pw.id).toFixed(0) + 'S', x + u * 9, y + 7 + u * 8 + small * 8, small, pw.color, 'left');
+      const saveTile = this.tile; this.tile = u * 7; this.drawPowerup(x + 10, y + h / 2 - u * 3.5, pw.color, { magnet: 'U', freeze: '*', addict: '$', boost: 'X' }[pw.id], 0.5); this.tile = saveTile;
+      F.text(ctx, pw.name, x + u * 10 + 12, y + 7, u, '#ffffff', 'left');
+      F.text(ctx, pw.desc, x + u * 10 + 12, y + 7 + u * 8, small, '#aaaaaa', 'left');
+      F.text(ctx, 'DURACAO ' + this.duration(pw.id).toFixed(0) + 'S', x + u * 10 + 12, y + 7 + u * 8 + small * 8, small, pw.color, 'left');
       // níveis
       for (let k = 0; k < 3; k++) { ctx.fillStyle = k < lvl ? pw.color : '#333344'; ctx.fillRect(x + w - 10 - (3 - k) * (u * 3 + 3), y + 8, u * 3, u * 2); }
       const tag = lvl >= 3 ? 'MAXIMO' : '$' + UP_COST[lvl];
