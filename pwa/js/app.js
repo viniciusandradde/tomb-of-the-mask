@@ -3,6 +3,7 @@
   'use strict';
   const canvas = document.getElementById('game');
   const game = new window.Game(canvas);
+  if (game.wbLoad) game.wbLoad();
   window.game = game; // útil para depuração e testes
 
   // Service worker para funcionar offline

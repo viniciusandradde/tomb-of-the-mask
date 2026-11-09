@@ -199,6 +199,7 @@
       if (this.state === 'play') this.queueMove(dir);
       if (this.state === 'title') this.goto('worlds');
       if (this.state === 'levels') this.mapMove(dir === 'up' || dir === 'right' ? 1 : -1);
+      if (this.state === 'break' && this.wbInsist) this.wbInsist();
     }
     confirm() {
       if (this.state === 'title') this.goto('worlds');
@@ -236,6 +237,7 @@
     startLevel(index) {
       const L = root.LEVELS[index];
       if (!L) return;
+      if (this.wbCheckpoint && this.wbCheckpoint()) return;
       this.mode = 'stage';
       this.levelIndex = index;
       this.level = L;
@@ -252,6 +254,7 @@
     }
 
     startArcade() {
+      if (this.wbCheckpoint && this.wbCheckpoint()) return;
       this.mode = 'arcade';
       this.levelIndex = -1;
       this.world = root.WORLDS[0];
@@ -595,7 +598,8 @@
       let dt = Math.min(0.05, t - this.lastFrame);
       this.lastFrame = t;
       this.t += dt;
-      if (this.state === 'play') this.update(dt);
+      if (this.state === 'play') { this.update(dt); if (this.wbTick) this.wbTick(dt); }
+      else if (this.state === 'hifive' || this.state === 'break' || this.state === 'mission' || this.state === 'goodnight') this.updateFx(dt);
       else if ((this.state === 'bossintro' || this.state === 'bossdeath') && this.updateBossCine) this.updateBossCine(dt);
       else this.updateFx(dt);
       this.render();
@@ -834,6 +838,7 @@
       this.state = this.mode === 'arcade' ? 'arcadeover' : 'dead';
       this.buttons = [];
       if (this.kids()) { this.deathMsg = this.pick(ANIMOS); this.speak(this.deathMsg); }
+      if (this.wbMaybeWarn && this.mode === 'stage') setTimeout(() => this.wbMaybeWarn(), 1800);
       if (this.mode === 'arcade') {
         const sc = this.arcadeScore();
         if (sc > this.save.arcadeBest) { this.save.arcadeBest = sc; this.newBest = true; } else this.newBest = false;
@@ -858,13 +863,15 @@
       this.newWorld = wasUnlocked !== this.save.unlocked && (idx + 1) % 10 === 0 && idx + 1 < root.LEVELS.length;
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
+      if (this.wbMaybeWarn) setTimeout(() => this.wbMaybeWarn(), 900);
       this.winTitle = this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
       this.confetti = (this.kids() || this.level.boss) ? (this.level.boss && this.level.boss.master ? 3 : 1) : 0;
       if (this.level.boss && this.level.boss.master) { this.save.zerou = true; if (this.kids()) this.speak('Você zerou o jogo! Parabéns, campeão!'); }
       if (this.kids()) this.speak(this.pick(ELOGIOS) + (stars === 3 ? ' Três estrelas!' : stars === 0 ? ' Tente pegar as estrelas douradas!' : ''));
     }
-    restart() { if (this.mode === 'arcade') this.startArcade(); else this.startLevel(this.levelIndex); }
+    restart() { if (this.wbCheckpoint && this.wbCheckpoint()) return; if (this.mode === 'arcade') this.startArcade(); else this.startLevel(this.levelIndex); }
     nextLevel() {
+      if (this.wbCheckpoint && this.wbCheckpoint()) return;
       if (this.levelIndex + 1 < root.LEVELS.length) this.startLevel(this.levelIndex + 1);
       else this.goto('title');
     }
@@ -906,6 +913,12 @@
         if (this.state === 'arcadeover') this.renderArcadeOver();
         if ((this.state === 'bossintro' || this.state === 'bossdeath') && this.renderBossCine) this.renderBossCine();
       } else if (this.state === 'title') this.renderTitle();
+      else if (this.state === 'mission') this.renderMission();
+      else if (this.state === 'break') this.renderBreak();
+      else if (this.state === 'hifive') this.renderHiFive();
+      else if (this.state === 'gate') this.renderGate();
+      else if (this.state === 'parent') this.renderParentPanel();
+      else if (this.state === 'goodnight') this.renderGoodnight();
       else if (this.state === 'worlds') this.renderWorlds();
       else if (this.state === 'levels') this.renderLevels();
       else if (this.state === 'shop') this.renderShop();
@@ -1353,6 +1366,7 @@
         ctx.globalAlpha = 1;
       }
       if (this.drawItemsHud) this.drawItemsHud();
+      if (this.drawWbHud) this.drawWbHud();
     }
 
     // ------------------------------------------------------------ overlays
@@ -1459,6 +1473,7 @@
       this.drawButton('⚙ OPCOES', cx, by + u * 48, w, () => this.goto('settings'), '#8cf5ff', 't4');
       this.drawButton(this.kids() ? '\u2665 MODO: LUDICO' : 'MODO: CLASSICO', cx, by + u * 64, w, () => { this.save.kids = !this.save.kids; Save.write(); this.buttons = []; if (this.save.kids) this.speak('Modo lúdico ligado!'); }, this.kids() ? '#ff4fa3' : '#888899', 't5');
       if (!this.audio.ready() && Math.floor(this.t * 2) % 2 === 0) F.text(ctx, '\u266A TOQUE PARA ATIVAR O SOM', cx, this.H - u * 27 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
+      if (this.save.wbCfg && this.save.wbCfg.medals) F.text(ctx, '\u2600 MISSOES DE BRINCAR CUMPRIDAS: ' + this.save.wbCfg.medals, cx, this.H - u * 36 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
       F.text(ctx, 'RECORDE ARCADE ' + this.save.arcadeBest + '   FASES ' + Math.min(this.save.unlocked - 1, root.LEVELS.length) + '/' + root.LEVELS.length, cx, this.H - u * 9 - 8, Math.max(1, u - 1), '#888899', 'center');
       this.buttons = this.buttons.filter((b) => b.id !== 'pause');
     }
@@ -1678,7 +1693,7 @@
       this.renderBackdrop('#8cf5ff');
       F.text(ctx, 'OPCOES', cx, 16, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#0f4d52' });
       const w = Math.min(this.W * 0.85, 340);
-      const top = 16 + u * 20, step = Math.min(u * 7 + 32, (this.H - 16 - u * 20 - u * 7 - 110) / 8);
+      const top = 16 + u * 18, step = Math.min(u * 7 + 26, (this.H - 16 - u * 18 - u * 7 - 100) / 9);
       const opts = [
         ['MODO LUDICO', 'kids', null],
         ['VOZ (PT-BR)', 'voice', () => { if (this.save.voice) this.speak('Oi! Vamos jogar?'); }],
@@ -1691,11 +1706,12 @@
       opts.forEach(([label, key, after], i) => {
         this.drawButton(label + ': ' + (this.save[key] ? 'SIM' : 'NAO'), cx, top + i * step, w, () => { this.save[key] = !this.save[key]; if (after) after(); Save.write(); this.buttons = []; }, '#8cf5ff', 's' + i);
       });
-      this.drawButton('APAGAR PROGRESSO', cx, top + opts.length * step + 10, w, () => {
+      this.drawButton('\u2600 PAUSA SAUDAVEL (PAIS)', cx, top + opts.length * step + 10, w, () => this.wbOpenGate(() => { this.state = 'parent'; this.buttons = []; }), '#ffd23f', 'wb');
+      this.drawButton('APAGAR PROGRESSO', cx, top + (opts.length + 1) * step + 10, w, () => {
         if (this.confirmReset) { localStorage.removeItem(SAVE_KEY); this.save = Save.load(); this.confirmReset = false; this.buttons = []; this.toastMsg('APAGADO'); }
         else { this.confirmReset = true; this.buttons = []; }
       }, this.confirmReset ? '#ff3b3b' : '#888899', 'reset');
-      if (this.confirmReset) F.text(ctx, 'TOQUE DE NOVO PARA CONFIRMAR', cx, top + opts.length * step + 10 + u * 8, Math.max(1, u - 1), '#ff3b3b', 'center');
+      if (this.confirmReset) F.text(ctx, 'TOQUE DE NOVO PARA CONFIRMAR', cx, top + (opts.length + 1) * step + 10 + u * 8, Math.max(1, u - 1), '#ff3b3b', 'center');
       F.text(ctx, this.audio.ready() ? 'AUDIO: ATIVO' : 'AUDIO: BLOQUEADO PELO NAVEGADOR. TOQUE DE NOVO.', cx, this.H - u * 46, Math.max(1, u - 1), this.audio.ready() ? '#7fc33a' : '#ff3b3b', 'center');
       F.text(ctx, 'MODO LUDICO: VOZ, FESTA E CARINHO.', cx, this.H - u * 38, Math.max(1, u - 1), '#ff4fa3', 'center');
       F.text(ctx, 'A DIFICULDADE E SEMPRE A MESMA.', cx, this.H - u * 30, Math.max(1, u - 1), '#ff4fa3', 'center');
