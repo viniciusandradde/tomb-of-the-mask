@@ -202,6 +202,24 @@ const { spawn } = require('child_process');
   await page.screenshot({ path: path.join(out, '9e-boanoite.png') });
   await page.evaluate(() => { game.wb.status = 'idle'; game.wb.playSec = 0; game.wb.cycles = 0; game.wbSave(); game.goto('title'); });
 
+  // flechas: todo atirador tem raio >= 3; flecha mata jogador parado no raio; flecha some na parede
+  const flechas = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const rays = LEVELS.flatMap((L) => Maze.shooterRays(L.rows));
+    const curtos = rays.filter((r) => r.len < 3).length;
+    const idx = LEVELS.findIndex((L) => /[dulr]/.test(L.rows.join('')) && !L.boss);
+    game.save.kids = false; game.startLevel(idx); game.started = true;
+    const s = game.shooters[0]; const p = game.player;
+    p.cx = s.x + s.dx * 2; p.cy = s.y + s.dy * 2; p.x = p.cx + 0.5; p.y = p.cy + 0.5; p.moving = false; p.invul = 0; p.shield = 0;
+    s.timer = 0.01; await wait(900);
+    const morte = { state: game.state, cause: game.deathCause };
+    game.startLevel(idx); game.started = true; const s2 = game.shooters[0]; game.player.cx = -5; game.player.cy = -5; game.player.x = -4.5; game.player.y = -4.5;
+    s2.timer = 0.01; let dentroSolido = 0, vistas = 0;
+    for (let f = 0; f < 30; f++) { for (const sh of game.shots) { vistas++; if (Maze.isSolid(game.grid.get(Math.floor(sh.x), Math.floor(sh.y)))) dentroSolido++; } await wait(40); }
+    return { atiradores: rays.length, curtos, morte, vistas, dentroSolido };
+  });
+  console.log('flechas:', JSON.stringify(flechas));
+
   // modo lúdico: morrer em um espinho mostra "OPA!" e a fase reinicia igual
   const ludico = await page.evaluate(async () => {
     game.save.kids = true; game.startLevel(12);
@@ -263,6 +281,7 @@ const { spawn } = require('child_process');
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
   if (!wb.warned || wb.mission.state !== 'mission' || wb.breakState.state !== 'break' || wb.insist !== 1 || wb.insistMax !== 4 || wb.night.state !== 'goodnight' || wb.stillBreak !== 'break' || wb.reload !== 'break' || !wb.done || wb.hifive !== 'hifive' || wb.after.medals < 1 || wb.after.playSec !== 0 || wb.resumed !== 'levels' || wb.parent !== 'parent') { console.log('FALHA: missão de brincar'); process.exit(1); }
   if (derrota.stillDead !== 'dead' || derrota.after !== 'play') { console.log('FALHA: tela de derrota'); process.exit(1); }
+  if (flechas.curtos !== 0 || flechas.morte.state !== 'dead' || flechas.morte.cause !== 'flecha' || flechas.vistas === 0 || flechas.dentroSolido !== 0) { console.log('FALHA: flechas'); process.exit(1); }
   if (itens.afterUse.inv !== 1 || itens.afterUse.shield !== 1 || itens.gain.coins !== 1 || itens.gain.score !== 30 || !itens.imune || itens.dur.coelho <= itens.dur.freeze0) { console.log('FALHA: itens'); process.exit(1); }
   if (morte.state !== 'dead' || morte.cause !== 'chefao') { console.log('FALHA: contato com chefe deveria matar'); process.exit(1); }
   console.log('e2e ok; capturas em', out);
