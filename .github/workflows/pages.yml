@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - name: Verifica sintaxe de todos os scripts do jogo
+        run: for f in pwa/js/*.js pwa/sw.js server.js; do node --check "$f"; done
       - run: node tools/validate.js
       - uses: actions/configure-pages@v5
         with: { enablement: true }
