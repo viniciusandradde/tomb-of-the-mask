@@ -189,6 +189,7 @@
       if (this.state === 'dead') { this.restart(); return; }
       if (this.state === 'play') this.queueMove(dir);
       if (this.state === 'title') this.goto('worlds');
+      if (this.state === 'levels') this.mapMove(dir === 'up' || dir === 'right' ? 1 : -1);
     }
     confirm() {
       if (this.state === 'title') this.goto('worlds');
@@ -196,6 +197,7 @@
       else if (this.state === 'win') this.nextLevel();
       else if (this.state === 'arcadeover') this.goto('title');
       else if (this.state === 'pause') this.togglePause();
+      else if (this.state === 'levels') this.mapEnter();
     }
     tap(x, y) {
       for (const b of this.buttons) {
@@ -210,6 +212,7 @@
     // ------------------------------------------------------------ estados
     goto(state) {
       this.state = state; this.buttons = [];
+      if (state === 'levels') this.mapInit();
       if (state === 'title' || state === 'worlds' || state === 'levels' || state === 'shop' || state === 'settings') {
         this.audio.startMusic(99); // tema do menu
       }
@@ -228,7 +231,8 @@
       this.level = L;
       this.world = root.WORLDS[L.world];
       this.setupGrid(L.rows, L.fluid);
-      this.audio.startMusic(this.world.music);
+      if (L.boss) this.setupBoss(L.boss);
+      this.audio.startMusic(L.boss ? (L.boss.master ? 9 : 8) : this.world.music);
       this.state = 'play'; this.buttons = [];
       this.hintTimer = index === 0 ? 6 : 0;
       this.lastFrame = now();
@@ -322,6 +326,7 @@
       this.bats = []; this.shots = []; this.shooters = []; this.particles = [];
       this.spawnEntities(this.grid.minY, this.grid.maxY);
       this.fluid = fluid ? { type: fluid.type, speed: fluid.speed, delay: fluid.delay, y: this.grid.maxY + 2, started: false, warned: false } : null;
+      this.boss = null; this.core = null;
       this.camY = this.player.y - this.viewRows() / 2;
       this.started = false;
     }
@@ -367,7 +372,7 @@
       const p = this.player;
       // alvo: desliza até o próximo sólido (ignorando espinhos, que matam ao passar)
       let tx = p.cx, ty = p.cy;
-      while (!M.isSolid(this.grid.get(tx + d[0], ty + d[1]))) { tx += d[0]; ty += d[1]; if (Math.abs(tx - p.cx) + Math.abs(ty - p.cy) > 200) break; }
+      while (!this.blocked(tx + d[0], ty + d[1])) { tx += d[0]; ty += d[1]; if (Math.abs(tx - p.cx) + Math.abs(ty - p.cy) > 200) break; }
       if (tx === p.cx && ty === p.cy) { this.bumpFx(d); return; }
       p.dir = d; p.face = d; p.moving = true; p.tx = tx; p.ty = ty; p.queued = null;
       p.stretch = 0; p.trailDist = FX.trailStep; // primeira cópia nasce já no primeiro passo
@@ -375,6 +380,172 @@
       if (!this.started) { this.started = true; this.timeStart = now(); }
       this.audio.move();
     }
+    // sólido para o deslize: paredes/atiradores e a porta da saída trancada pelo chefe
+    blocked(x, y) {
+      const c = this.grid.get(x, y);
+      return M.isSolid(c) || (c === T.EXIT && this.boss && this.boss.hp > 0);
+    }
+    bossAlive() { return !!(this.boss && this.boss.hp > 0); }
+
+    // ------------------------------------------------------------ chefão
+    setupBoss(def) {
+      const rows = this.level.rows; // linhas originais (com o 'S'), para o solver
+      const res = M.solve(rows);
+      // células onde o núcleo de energia pode aparecer (fora do corredor do chefe)
+      const cands = [];
+      for (let y = 5; y < rows.length - 1; y++) for (let x = 1; x < COLS - 1; x++) {
+        const c = rows[y][x];
+        if ((c === T.DOT || c === T.EMPTY || c === T.COIN) && res.passable.has(M.key(x, y))) cands.push([x, y]);
+      }
+      this.boss = {
+        name: def.name, hp: def.hp, maxHp: def.hp, speed: def.speed, shot: def.shot, batEvery: def.bats, size: def.size || 3, master: !!def.master,
+        x: COLS / 2, y: 2.5, dir: 1, stun: 0, hitCd: 0, shotTimer: 1.5, batTimer: 3, coreTimer: 0.8, dead: false, deathT: 0, phase: 0, flash: 0,
+      };
+      this.coreCands = cands;
+      this.core = null;
+      this.toastMsg('PEGUE O NUCLEO AZUL!');
+      if (this.kids()) this.speak('Cuidado, é o chefão! Pegue a bolinha azul para deixar ele tonto, depois bata nele!');
+    }
+    spawnCore() {
+      const p = this.player;
+      const far = this.coreCands.filter(([x, y]) => Math.abs(x - p.cx) + Math.abs(y - p.cy) >= 4);
+      const pool = far.length ? far : this.coreCands;
+      if (!pool.length) return;
+      const [x, y] = pool[Math.floor(Math.random() * pool.length)];
+      this.core = { x, y, t: 0 };
+    }
+    updateBoss(dt) {
+      const b = this.boss, p = this.player;
+      b.phase += dt;
+      if (b.dead) { b.deathT += dt; return; }
+      b.flash = Math.max(0, b.flash - dt);
+      b.hitCd = Math.max(0, b.hitCd - dt);
+      const half = b.size / 2;
+      const stunned = b.stun > 0;
+      if (stunned) { b.stun -= dt; if (b.stun <= 0) { b.stun = 0; this.toastMsg('ELE ACORDOU!'); } }
+      // movimento no corredor do topo
+      const sp = b.speed * (stunned ? 0.35 : 1) * (p.freeze > 0 ? 0 : 1);
+      b.x += b.dir * sp * dt;
+      if (b.x - half < 1) { b.x = 1 + half; b.dir = 1; } else if (b.x + half > COLS - 1) { b.x = COLS - 1 - half; b.dir = -1; }
+      if (this.started && !stunned && p.freeze <= 0) {
+        // tiro que cai da boca do chefe
+        b.shotTimer -= dt;
+        if (b.shotTimer <= 0) {
+          b.shotTimer = b.shot;
+          const col = Math.floor(b.x) + 0.5;
+          this.shots.push({ x: col, y: 4.2, dx: 0, dy: 1, life: 8 });
+          this.audio.shoot();
+        }
+        // invoca morcegos
+        b.batTimer -= dt;
+        if (b.batTimer <= 0 && this.bats.length < 6) {
+          b.batTimer = b.batEvery;
+          const spots = this.coreCands.filter(([x, y]) => y >= 5 && y <= 9 && Math.abs(y - p.cy) >= 2);
+          if (spots.length) { const [x, y] = spots[Math.floor(Math.random() * spots.length)]; this.bats.push({ x: x + 0.5, y: y + 0.5, dx: Math.random() < 0.5 ? 1 : -1, dy: 0, phase: 0 }); this.burst(x + 0.5, y + 0.5, 8, '#b04cff', 2); }
+        }
+      }
+      // núcleo de energia
+      if (this.core) {
+        this.core.t += dt;
+        if (p.cx === this.core.x && p.cy === this.core.y) {
+          this.core = null; b.stun = 6; b.coreTimer = 1.2;
+          this.audio.powerup(); this.burst(p.x, p.y, 16, '#8cf5ff', 3);
+          this.toastMsg('CHEFAO TONTO! BATA NELE!');
+          if (this.kids()) this.speak('Agora bate nele!');
+        }
+      } else if (!stunned) {
+        b.coreTimer -= dt;
+        if (b.coreTimer <= 0) this.spawnCore();
+      }
+      // contato com o jogador
+      if (!p.dead && this.started && Math.abs(p.x - b.x) < half + 0.35 && Math.abs(p.y - b.y) < 1.5 + 0.35) {
+        if (stunned && b.hitCd <= 0) {
+          b.hp--; b.hitCd = 1; b.flash = 0.5; b.stun = Math.min(b.stun, 0.9);
+          p.invul = Math.max(p.invul, 1.2); p.moving = false; p.queued = null;
+          // recuo do jogador para fora do corredor
+          p.cy = 4; p.y = 4.5; p.cx = clamp(p.cx, 1, COLS - 2); p.x = p.cx + 0.5;
+          this.audio.shieldHit(); this.burst(b.x, b.y, 30, this.world.color, 4); this.burst(b.x, b.y, 12, '#ffffff', 3);
+          if (this.save.shake) this.shake = 0.3;
+          if (b.hp <= 0) this.bossDefeated();
+          else { this.toastMsg(b.hp === 1 ? 'MAIS UM GOLPE!' : 'ACERTOU! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Mais um!' : 'Acertou!'); }
+        } else if (!stunned && p.invul <= 0) this.die('chefao');
+      }
+    }
+    bossDefeated() {
+      const b = this.boss;
+      b.dead = true; b.deathT = 0; b.stun = 0;
+      this.shots = []; this.bats = []; this.core = null;
+      for (let i = 0; i < 6; i++) setTimeout(() => { if (this.boss) { this.burst(b.x + (Math.random() - 0.5) * 2, b.y + (Math.random() - 0.5) * 2, 20, i % 2 ? '#ffffff' : this.world.color, 4); } }, i * 120);
+      this.audio.death(); setTimeout(() => this.audio.win(), 500);
+      if (this.save.shake) this.shake = 0.6;
+      this.flash = 0.6;
+      this.score += 1000;
+      this.toastMsg('CHEFAO DERROTADO! VA PARA A SAIDA!');
+      if (this.kids()) this.speak('Você venceu o chefão! Agora corre para a saída!');
+    }
+    drawBoss(ox, oy) {
+      const ctx = this.ctx, s = this.tile, b = this.boss;
+      if (b.dead && b.deathT > 1.2) return;
+      const cx = ox + b.x * s, cy = oy + b.y * s;
+      const w = b.size * s * 0.9, h = s * 2.6;
+      ctx.save(); ctx.translate(cx, cy);
+      if (b.dead) { const k = 1 - b.deathT / 1.2; ctx.globalAlpha = k; ctx.scale(1 + (1 - k) * 0.6, k); }
+      const stunned = b.stun > 0;
+      const base = b.master ? '#f0f0f0' : shade(this.world.color, 0.8);
+      const col = b.flash > 0 && Math.floor(this.t * 30) % 2 === 0 ? '#ffffff' : stunned ? (Math.floor(this.t * 10) % 2 ? '#dfe8ff' : '#9ad8ff') : base;
+      const bob = Math.sin(b.phase * 3) * s * 0.08;
+      ctx.translate(0, bob);
+      ctx.shadowColor = stunned ? '#8cf5ff' : (b.master ? '#ffffff' : this.world.color); ctx.shadowBlur = 18;
+      ctx.fillStyle = col; ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.shadowBlur = 0;
+      // cocar / espinhos no topo
+      ctx.fillStyle = shade(col, 0.7);
+      for (let i = 0; i < b.size * 2; i++) ctx.fillRect(-w / 2 + i * (w / (b.size * 2)) + 2, -h / 2 - s * 0.35, w / (b.size * 2) - 4, s * 0.35);
+      ctx.fillRect(-w / 2, h * 0.2, w, h * 0.3);
+      // olhos
+      const eye = s * 0.45, ey = -h * 0.12;
+      const look = clamp((this.player.x - b.x) * 0.1, -0.15, 0.15) * s;
+      ctx.fillStyle = '#1a0a1a';
+      ctx.fillRect(-w * 0.3 - eye / 2, ey - eye / 2, eye, eye); ctx.fillRect(w * 0.3 - eye / 2, ey - eye / 2, eye, eye);
+      ctx.fillStyle = stunned ? '#8cf5ff' : '#ff3b3b'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+      const pu = eye * 0.45;
+      if (stunned) { // olhos em X
+        ctx.shadowBlur = 0; ctx.strokeStyle = '#8cf5ff'; ctx.lineWidth = Math.max(2, s * 0.08);
+        for (const ex of [-w * 0.3, w * 0.3]) { ctx.beginPath(); ctx.moveTo(ex - pu, ey - pu); ctx.lineTo(ex + pu, ey + pu); ctx.moveTo(ex + pu, ey - pu); ctx.lineTo(ex - pu, ey + pu); ctx.stroke(); }
+      } else {
+        ctx.fillRect(-w * 0.3 - pu / 2 + look, ey - pu / 2, pu, pu); ctx.fillRect(w * 0.3 - pu / 2 + look, ey - pu / 2, pu, pu);
+      }
+      ctx.shadowBlur = 0;
+      // boca com dentes
+      ctx.fillStyle = '#1a0a1a'; ctx.fillRect(-w * 0.3, h * 0.22, w * 0.6, s * 0.3);
+      ctx.fillStyle = '#ffffff'; for (let i = 0; i < 5; i++) ctx.fillRect(-w * 0.3 + i * (w * 0.6 / 5) + 2, h * 0.22, w * 0.6 / 5 - 4, s * 0.12);
+      ctx.restore();
+      // núcleo de energia
+      if (this.core) {
+        const k = s * (0.3 + 0.08 * Math.sin(this.core.t * 8));
+        const px = ox + (this.core.x + 0.5) * s, py = oy + (this.core.y + 0.5) * s;
+        ctx.shadowColor = '#8cf5ff'; ctx.shadowBlur = 16; ctx.fillStyle = '#8cf5ff';
+        ctx.beginPath(); ctx.arc(px, py, k, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px - k * 0.3, py - k * 0.3, k * 0.35, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // anel pulsante
+        ctx.strokeStyle = rgba('#8cf5ff', 0.5 - 0.4 * ((this.core.t * 1.5) % 1)); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(px, py, k + s * 0.6 * ((this.core.t * 1.5) % 1), 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    drawBossHud() {
+      const ctx = this.ctx, u = this.ui, b = this.boss;
+      const y = this.H - (u * 7 + 18) - 14 - u * 8;
+      const w = Math.min(this.W * 0.7, 300), x = this.W / 2 - w / 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 6, y - 4, w + 12, u * 7 + 18);
+      F.text(ctx, b.name, this.W / 2, y, Math.max(1, u - 1), b.master ? '#ffffff' : this.world.accent, 'center');
+      const by = y + u * 7 + 2, bh = 8;
+      ctx.fillStyle = '#331111'; ctx.fillRect(x, by, w, bh);
+      const seg = w / b.maxHp;
+      for (let i = 0; i < b.hp; i++) { ctx.fillStyle = b.stun > 0 ? '#8cf5ff' : '#ff3b3b'; ctx.fillRect(x + i * seg + 1, by + 1, seg - 2, bh - 2); }
+      if (b.stun > 0) F.text(ctx, 'TONTO ' + Math.ceil(b.stun), this.W / 2, by + bh + 4, Math.max(1, u - 1), '#8cf5ff', 'center');
+    }
+
     bumpFx(d) {
       const p = this.player;
       this.audio.bump();
@@ -509,6 +680,8 @@
       }
       this.shots = this.shots.filter((s) => s.life > 0);
 
+      if (this.boss) this.updateBoss(dt);
+
       // lava / água
       if (this.fluid) {
         if (this.started && !this.fluid.started && this.elapsed > this.fluid.delay) this.fluid.started = true;
@@ -536,10 +709,11 @@
       const wantLead = p.moving ? p.dir[1] * FX.camLead : 0;
       this.camLead = lerp(this.camLead, wantLead, 1 - Math.exp(-(p.moving ? 12 : 5) * dt));
       const target = p.y + this.camLead - this.viewRows() * 0.55;
-      const minCam = this.grid.minY, maxCam = this.grid.maxY + 1 - this.viewRows();
-      if (this.mode === 'stage' && this.grid.maxY - this.grid.minY + 1 <= this.viewRows()) {
+      const topPad = this.boss ? (this.ui * 7 + 22) / this.tile : 0;
+      const minCam = this.grid.minY - topPad, maxCam = this.grid.maxY + 1 - this.viewRows();
+      if (this.mode === 'stage' && this.grid.maxY - this.grid.minY + 1 + topPad <= this.viewRows()) {
         // fase cabe inteira na tela: câmera fixa e centralizada
-        this.camY = lerp(this.camY, (this.grid.minY + this.grid.maxY + 1) / 2 - this.viewRows() / 2, 1 - Math.exp(-FX.camRate * dt));
+        this.camY = lerp(this.camY, (this.grid.minY - topPad + this.grid.maxY + 1) / 2 - this.viewRows() / 2, 1 - Math.exp(-FX.camRate * dt));
       } else {
         this.camY = lerp(this.camY, this.mode === 'arcade' ? target : clamp(target, Math.min(minCam, maxCam), Math.max(minCam, maxCam)), 1 - Math.exp(-FX.camRate * dt));
       }
@@ -547,6 +721,7 @@
 
     // Próximo movimento do caminho mais curto a partir da posição atual
     computeHint() {
+      if (this.bossAlive()) return null;
       const rows = [];
       for (let y = this.grid.minY; y <= this.grid.maxY; y++) rows.push(this.grid.rows.get(y).join(''));
       const p = this.player;
@@ -646,7 +821,8 @@
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
       this.winTitle = this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
-      this.confetti = this.kids() ? 1 : 0;
+      this.confetti = (this.kids() || this.level.boss) ? (this.level.boss && this.level.boss.master ? 3 : 1) : 0;
+      if (this.level.boss && this.level.boss.master) { this.save.zerou = true; if (this.kids()) this.speak('Você zerou o jogo! Parabéns, campeão!'); }
       if (this.kids()) this.speak(this.pick(ELOGIOS) + (stars === 3 ? ' Três estrelas!' : stars === 0 ? ' Tente pegar as estrelas douradas!' : ''));
     }
     restart() { if (this.mode === 'arcade') this.startArcade(); else this.startLevel(this.levelIndex); }
@@ -714,7 +890,7 @@
 
     // imagem de fundo do mundo (gerada com IA), carregada sob demanda
     bgImage(name) {
-      const alias = { 'bg-sombras': 'bg-catacumba', 'bg-nucleo': 'bg-vulcao' };
+      const alias = { 'bg-sombras': 'bg-catacumba', 'bg-nucleo': 'bg-vulcao', 'bg-mestre': 'bg-templo' };
       name = alias[name] || name;
       this.images = this.images || {};
       if (!(name in this.images)) {
@@ -782,7 +958,7 @@
         if (c === T.DOT) { const d = Math.max(2, Math.round(s * 0.14)); ctx.fillStyle = this.worldAtRow(y).accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
         else if (c === T.COIN) this.drawCoin(px, py, pulse);
         else if (c === T.SPIKE) this.drawSpike(px, py, x, y);
-        else if (c === T.EXIT) this.drawExit(px, py, pulse);
+        else if (c === T.EXIT) this.drawExit(px, py, pulse, this.bossAlive());
         else if (c === T.SHIELD) this.drawPowerup(px, py, '#8cf5ff', 'S', pulse);
         else if (c === T.FREEZE) this.drawPowerup(px, py, '#ffffff', '*', pulse);
         else if (c === T.MAGNET) this.drawPowerup(px, py, '#ff4fa3', 'U', pulse);
@@ -796,6 +972,7 @@
       }
       // morcegos
       for (const b of this.bats) this.drawBat(ox + b.x * s, oy + b.y * s, b, this.player.freeze > 0);
+      if (this.boss) this.drawBoss(ox, oy);
       // rastro + jogador
       const p = this.player;
       if (p.trail.length) {
@@ -880,8 +1057,16 @@
       ctx.fillStyle = '#9a9aa8'; ctx.fillRect(-s / 2, s / 2 - s * 0.14, s, s * 0.14);
       ctx.restore();
     }
-    drawExit(px, py, pulse) {
+    drawExit(px, py, pulse, locked) {
       const ctx = this.ctx, s = this.tile;
+      if (locked) {
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(px, py, s, s);
+        ctx.strokeStyle = '#664466'; ctx.lineWidth = 2; ctx.strokeRect(px + 2, py + 2, s - 4, s - 4);
+        // cadeado
+        ctx.fillStyle = '#ff3b3b'; ctx.fillRect(px + s * 0.32, py + s * 0.45, s * 0.36, s * 0.3);
+        ctx.strokeStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(px + s / 2, py + s * 0.42, s * 0.14, Math.PI, 0); ctx.stroke();
+        return;
+      }
       ctx.fillStyle = '#05030a'; ctx.fillRect(px, py, s, s);
       ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 14 + pulse * 10;
       ctx.fillStyle = rgba('#ffd23f', 0.9);
@@ -1081,7 +1266,7 @@
     renderHud() {
       const ctx = this.ctx, u = this.ui, pad = 8;
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, this.W, u * 7 + pad * 2 + 4);
-      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : 'FASE ' + this.level.n;
+      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.boss ? (this.level.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO') : 'FASE ' + this.level.n;
       F.text(ctx, label, pad, pad, u, this.world.accent, 'left');
       const sc = this.mode === 'arcade' ? this.arcadeScore() : this.score;
       F.text(ctx, String(sc).padStart(6, '0'), this.W / 2, pad, u, '#ffffff', 'center');
@@ -1092,6 +1277,7 @@
       } else {
         F.text(ctx, Math.floor(this.height) + 'M', this.W / 2, pad + u * 8 + 2, Math.max(1, u - 1), '#ffd23f', 'center');
       }
+      if (this.boss && !this.boss.dead) this.drawBossHud();
       // pausa
       this.buttons = this.buttons.filter((b) => b.id !== 'pause');
       const bw = u * 7 + pad;
@@ -1150,8 +1336,8 @@
       const kids = this.kids();
       F.text(this.ctx, kids ? 'OPA!' : 'VOCE MORREU', cx, cy - u * 20, u * 2, kids ? '#ffd23f' : '#ff3b3b', 'center', { shadow: kids ? '#7a3a00' : '#400' });
       const causes = kids
-        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA TE ACERTOU', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU' }
-        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU' };
+        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA TE ACERTOU', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU', chefao: 'O CHEFAO TE PEGOU! PEGUE O NUCLEO AZUL PRIMEIRO' }
+        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU', chefao: 'O CHEFAO TE ESMAGOU' };
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
       if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
       if (Math.floor(this.t * 2) % 2 === 0) F.text(this.ctx, 'TOQUE PARA TENTAR DE NOVO', cx, cy + u * 16, u, '#ffd23f', 'center');
@@ -1163,8 +1349,10 @@
       this.overlay(0.75 * k);
       if (k < 0.3) return;
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
-      F.text(this.ctx, 'FASE ' + this.level.n, cx, cy - u * 44, u, this.world.accent, 'center');
-      F.text(this.ctx, this.winTitle || 'COMPLETA!', cx, cy - u * 32, u * 2, '#ffffff', 'center', { shadow: this.world.color });
+      const bossWin = !!this.level.boss;
+      F.text(this.ctx, bossWin ? (this.level.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO ' + this.level.boss.name) : 'FASE ' + this.level.n, cx, cy - u * 44, Math.max(1, bossWin ? u - 1 : u), this.world.accent, 'center');
+      const title = bossWin ? (this.level.boss.master ? 'VOCE ZEROU!' : 'DERROTADO!') : (this.winTitle || 'COMPLETA!');
+      F.text(this.ctx, title, cx, cy - u * 32, u * 2, bossWin ? '#ffd23f' : '#ffffff', 'center', { shadow: this.world.color });
       // estrelas animadas
       for (let i = 0; i < 3; i++) {
         const shown = this.t - this.winAt > 0.6 + i * 0.35;
@@ -1267,37 +1455,172 @@
         const s = this.tile; const save = this.tile; this.tile = Math.min(h - 10, 28);
         this.drawWall(x + 8, y + (h - this.tile) / 2, 0, 0, unlocked ? wd : { color: '#333344' }); this.tile = save; void s;
         F.text(ctx, (i + 1) + '. ' + wd.name, x + 48, y + 9, u, unlocked ? '#ffffff' : '#555566', 'left');
-        let stars = 0; for (let j = 0; j < 10; j++) stars += this.save.stars[i * 10 + j] || 0;
-        F.text(ctx, unlocked ? '* ' + stars + '/30' : 'BLOQUEADO', x + 48, y + 9 + u * 8, Math.max(1, u - 1), unlocked ? '#ffd23f' : '#555566', 'left');
+        const lv = this.worldLevels(i); let stars = 0; for (const idx of lv) stars += this.save.stars[idx] || 0;
+        F.text(ctx, unlocked ? '* ' + stars + '/' + lv.length * 3 + (wd.master ? '  CHEFAO FINAL' : '  9 FASES + CHEFAO') : 'BLOQUEADO', x + 48, y + 9 + u * 8, Math.max(1, u - 1), unlocked ? '#ffd23f' : '#555566', 'left');
         if (wd.fluid) F.text(ctx, wd.fluid === 'lava' ? 'LAVA' : 'AGUA', x + w - 10, y + 9, Math.max(1, u - 1), wd.fluid === 'lava' ? '#ff6a1a' : '#8cf5ff', 'right');
         if (unlocked && !this.buttons.find((b) => b.id === 'w' + i)) this.buttons.push({ id: 'w' + i, x, y, w, h, fn: () => { this.worldPage = i; this.goto('levels'); } });
       });
       this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => this.goto('title'), '#888899', 'back');
     }
+    // ---- mapa de mundo (estilo Mario): caminho, nós das fases, personagem e prévia ----
+    worldLevels(w) { return root.LEVELS.map((L, i) => [L, i]).filter(([L]) => L.world === w).map(([, i]) => i); }
+    mapInit() {
+      const idxs = this.worldLevels(this.worldPage);
+      // seleciona a última fase desbloqueada do mundo (ou a última jogada)
+      let sel = 0;
+      idxs.forEach((idx, i) => { if (this.save.unlocked > idx) sel = i; });
+      if (this.levelIndex >= 0 && idxs.includes(this.levelIndex)) sel = idxs.indexOf(this.levelIndex);
+      this.sel = sel;
+      const pos = this.mapNodePos(sel, idxs.length);
+      this.token = { x: pos.x, y: pos.y };
+      this.thumbs = this.thumbs || {};
+    }
+    mapPanelH() { return clamp(Math.round(this.H * 0.3), 150, 240); }
+    mapNodePos(i, count) {
+      const u = this.ui, top = 16 + u * 24, bottom = this.H - this.mapPanelH() - 14 - u * 6;
+      if (count <= 1) return { x: this.W / 2, y: (top + bottom) / 2 };
+      const t = i / (count - 1);
+      const y = bottom - t * (bottom - top);
+      const x = this.W / 2 + Math.sin(i * 1.9 + 0.6) * Math.min(this.W, 420) * 0.3;
+      return { x, y };
+    }
+    mapMove(delta) {
+      const idxs = this.worldLevels(this.worldPage);
+      const n = clamp(this.sel + delta, 0, idxs.length - 1);
+      if (n === this.sel) return;
+      if (this.save.unlocked <= idxs[n]) { this.audio.bump(); this.toastMsg('BLOQUEADO'); return; }
+      this.sel = n; this.audio.click();
+    }
+    mapEnter() {
+      const idxs = this.worldLevels(this.worldPage);
+      const idx = idxs[this.sel];
+      if (this.save.unlocked > idx) this.startLevel(idx);
+    }
+    // miniatura da fase (cache)
+    thumb(idx) {
+      const L = root.LEVELS[idx];
+      const k = idx + '|' + this.ui;
+      if (this.thumbs[k]) return this.thumbs[k];
+      const wd = root.WORLDS[L.world];
+      const cell = clamp(Math.floor(Math.min(120 / COLS, (this.mapPanelH() - 36) / L.rows.length)), 2, 6);
+      const c = document.createElement('canvas'); c.width = COLS * cell; c.height = L.rows.length * cell;
+      const x = c.getContext('2d');
+      x.fillStyle = '#05030a'; x.fillRect(0, 0, c.width, c.height);
+      for (let y = 0; y < L.rows.length; y++) for (let i = 0; i < COLS; i++) {
+        const ch = L.rows[y][i]; let col = null, pad = 0;
+        if (ch === T.WALL || ch in M.SHOOTERS) col = wd.color;
+        else if (ch === T.DOT) { col = rgba(wd.accent, 0.8); pad = Math.max(0, cell / 2 - 1); }
+        else if (ch === T.COIN) col = '#ffd23f';
+        else if (ch === T.SPIKE) col = '#ffffff';
+        else if (ch === T.SPAWN) col = '#ffd23f';
+        else if (ch === T.EXIT) col = L.boss ? '#ff3b3b' : '#fff6c2';
+        else if (ch === T.BAT_H || ch === T.BAT_V) col = '#b04cff';
+        else if (ch === T.SHIELD || ch === T.FREEZE || ch === T.MAGNET) col = '#8cf5ff';
+        if (col) { x.fillStyle = col; x.fillRect(i * cell + pad, y * cell + pad, cell - pad * 2, cell - pad * 2); }
+      }
+      if (L.boss) { // o chefe no corredor
+        x.fillStyle = L.boss.master ? '#f0f0f0' : shade(wd.color, 0.8); x.fillRect(cell * 4.5, cell * 1.2, cell * 3, cell * 2.6);
+        x.fillStyle = '#ff3b3b'; x.fillRect(cell * 5.2, cell * 2, cell * 0.6, cell * 0.6); x.fillRect(cell * 6.2, cell * 2, cell * 0.6, cell * 0.6);
+      }
+      this.thumbs[k] = c;
+      return c;
+    }
     renderLevels() {
       const ctx = this.ctx, u = this.ui, cx = this.W / 2;
       const wd = root.WORLDS[this.worldPage];
+      const idxs = this.worldLevels(this.worldPage);
+      const count = idxs.length;
       this.renderBackdrop(wd.color, 'bg-' + wd.id);
       F.text(ctx, wd.name, cx, 16, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: wd.color });
-      const cols = 2, rows = 5;
-      const gw = Math.min(this.W * 0.9, 380), cellW = (gw - 10) / cols, cellH = Math.min(u * 7 + 34, (this.H - 16 - u * 14 - u * 7 - 60) / rows - 10);
-      const top = 16 + u * 14, left = cx - gw / 2;
-      for (let i = 0; i < 10; i++) {
-        const idx = this.worldPage * 10 + i;
-        const L = root.LEVELS[idx];
-        const unlocked = this.save.unlocked > idx;
-        const col = i % cols, row = Math.floor(i / cols);
-        const x = left + col * (cellW + 10), y = top + row * (cellH + 10);
-        ctx.fillStyle = rgba(wd.color, unlocked ? 0.22 : 0.06); ctx.fillRect(x, y, cellW, cellH);
-        ctx.strokeStyle = unlocked ? wd.color : '#333344'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, cellW - 2, cellH - 2);
-        F.text(ctx, String(L.n), x + cellW / 2, y + 8, u * 1.5 | 0 || u, unlocked ? '#ffffff' : '#555566', 'center');
-        const st = this.save.stars[idx] || 0;
-        const stars = unlocked ? '*'.repeat(st) + '.'.repeat(3 - st) : 'X';
-        F.text(ctx, stars, x + cellW / 2, y + cellH - u * 7 - 6, u, unlocked ? '#ffd23f' : '#555566', 'center');
-        if (L.fluid) F.text(ctx, L.fluid.type === 'lava' ? '~' : '~', x + cellW - 8, y + 6, u, L.fluid.type === 'lava' ? '#ff6a1a' : '#8cf5ff', 'right');
-        if (unlocked && !this.buttons.find((b) => b.id === 'l' + i)) this.buttons.push({ id: 'l' + i, x, y, w: cellW, h: cellH, fn: () => this.startLevel(idx) });
+      F.text(ctx, 'DESLIZE PARA ESCOLHER  TOQUE PARA ENTRAR', cx, 16 + u * 12, Math.max(1, u - 1), '#888899', 'center');
+      // caminho
+      const pts = idxs.map((_, i) => this.mapNodePos(i, count));
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const open = this.save.unlocked > idxs[i + 1];
+        const n = Math.max(4, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / (u * 4)));
+        for (let k = 1; k < n; k++) {
+          const t = k / n, bx = lerp(a.x, b.x, t), by = lerp(a.y, b.y, t) + Math.sin(t * Math.PI) * -u * 3;
+          ctx.fillStyle = open ? rgba(wd.accent, 0.9) : 'rgba(80,80,100,0.6)';
+          const d = Math.max(2, u); ctx.fillRect(bx - d / 2, by - d / 2, d, d);
+        }
       }
-      this.drawButton('< MUNDOS', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => this.goto('worlds'), '#888899', 'back');
+      // nós
+      idxs.forEach((idx, i) => {
+        const L = root.LEVELS[idx], pos = pts[i];
+        const unlocked = this.save.unlocked > idx, done = this.save.unlocked > idx + 1 || (this.save.best[idx] || 0) > 0;
+        const boss = !!L.boss;
+        const r = boss ? u * 7 : u * 4.6;
+        const selected = i === this.sel;
+        if (selected) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pos.x, pos.y, r + 4 + Math.sin(this.t * 6) * 2, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.shadowColor = unlocked ? wd.color : '#000'; ctx.shadowBlur = unlocked ? 12 : 0;
+        ctx.fillStyle = unlocked ? (done ? wd.color : shade(wd.color, 0.75)) : '#2a2a38';
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.strokeStyle = unlocked ? '#ffffff' : '#555566'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2); ctx.stroke();
+        if (boss) {
+          // carinha do chefe
+          const k = r * 0.9; ctx.fillStyle = unlocked ? (L.boss.master ? '#f0f0f0' : shade(wd.color, 0.55)) : '#444455';
+          ctx.fillRect(pos.x - k / 2, pos.y - k / 2, k, k);
+          ctx.fillStyle = unlocked ? '#ff3b3b' : '#666677'; const e = k * 0.22;
+          ctx.fillRect(pos.x - k * 0.28 - e / 2, pos.y - k * 0.1, e, e); ctx.fillRect(pos.x + k * 0.28 - e / 2, pos.y - k * 0.1, e, e);
+          ctx.fillStyle = '#ffffff'; for (let q = -1; q <= 1; q++) ctx.fillRect(pos.x + q * k * 0.22 - k * 0.07, pos.y + k * 0.22, k * 0.14, k * 0.12);
+        } else {
+          F.text(ctx, String(i + 1), pos.x, pos.y - 3.5 * u, u, unlocked ? '#ffffff' : '#666677', 'center');
+        }
+        if (!unlocked) F.text(ctx, 'X', pos.x + r * 0.7, pos.y - r, Math.max(1, u - 1), '#ff3b3b', 'center');
+        const st = this.save.stars[idx] || 0;
+        if (unlocked && done) F.text(ctx, '*'.repeat(st) + '.'.repeat(3 - st), pos.x, pos.y + r + 3, Math.max(1, u - 1), '#ffd23f', 'center');
+        if (!this.buttons.find((b) => b.id === 'n' + i)) this.buttons.push({ id: 'n' + i, x: pos.x - r - 8, y: pos.y - r - 8, w: r * 2 + 16, h: r * 2 + 16, fn: () => {
+          if (!unlocked) { this.audio.bump(); this.toastMsg('COMPLETE A FASE ANTERIOR'); return; }
+          if (this.sel === i) this.mapEnter(); else this.sel = i;
+        } });
+      });
+      // personagem andando pelo mapa
+      const target = pts[this.sel];
+      this.token.x = lerp(this.token.x, target.x, 0.15); this.token.y = lerp(this.token.y, target.y, 0.15);
+      const hop = Math.abs(Math.sin(this.t * 8)) * (Math.hypot(target.x - this.token.x, target.y - this.token.y) > 3 ? u * 3 : u * 0.6);
+      this.drawBigMask(this.token.x, this.token.y - (root.LEVELS[idxs[this.sel]].boss ? u * 9 : u * 7) - hop, u * 5);
+      // painel de prévia
+      this.renderPreview(idxs[this.sel], wd);
+      this.drawButton('<', 20 + u * 4, 16 + u * 3.5, u * 8 + 16, () => this.goto('worlds'), '#888899', 'back');
+      if (this.toast) { ctx.globalAlpha = clamp(this.toast.t * 2, 0, 1); F.text(ctx, this.toast.msg, cx, this.H * 0.4, u, '#ffd23f', 'center', { shadow: '#000' }); ctx.globalAlpha = 1; this.toast.t -= 1 / 60; if (this.toast.t <= 0) this.toast = null; }
+    }
+    renderPreview(idx, wd) {
+      const ctx = this.ctx, u = this.ui, L = root.LEVELS[idx];
+      const ph = this.mapPanelH(), pw = Math.min(this.W - 16, 420), px = this.W / 2 - pw / 2, py = this.H - ph - 8;
+      ctx.fillStyle = 'rgba(3,2,8,0.85)'; ctx.fillRect(px, py, pw, ph);
+      ctx.strokeStyle = wd.color; ctx.lineWidth = 2; ctx.strokeRect(px + 1, py + 1, pw - 2, ph - 2);
+      const unlocked = this.save.unlocked > idx;
+      // miniatura
+      const th = this.thumb(idx);
+      const scale = Math.min((pw * 0.36) / th.width, (ph - 20) / th.height);
+      const tw = th.width * scale, tht = th.height * scale;
+      ctx.imageSmoothingEnabled = false;
+      ctx.globalAlpha = unlocked ? 1 : 0.35;
+      ctx.drawImage(th, px + 10, py + 10 + ((ph - 20) - tht) / 2, tw, tht);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = rgba(wd.accent, 0.5); ctx.strokeRect(px + 10, py + 10 + ((ph - 20) - tht) / 2, tw, tht);
+      // textos
+      const tx = px + 24 + pw * 0.36, lineH = u * 7 + 4;
+      let y = py + 12;
+      const small = Math.max(1, u - 1);
+      if (L.boss) { F.text(ctx, L.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO DO MUNDO', tx, y, small, '#ff3b3b', 'left'); y += lineH * 0.8; F.text(ctx, L.boss.name, tx, y, small, '#ffffff', 'left'); }
+      else F.text(ctx, 'FASE ' + L.n, tx, y, u, '#ffffff', 'left');
+      y += lineH;
+      if (!unlocked) { F.text(ctx, 'BLOQUEADA', tx, y, small, '#ff3b3b', 'left'); y += lineH; F.text(ctx, 'COMPLETE A ANTERIOR', tx, y, small, '#888899', 'left'); return; }
+      const st = this.save.stars[idx] || 0;
+      F.text(ctx, '*'.repeat(st) + '.'.repeat(3 - st) + '  ' + (this.save.best[idx] ? 'MELHOR ' + this.save.best[idx] : 'NOVA'), tx, y, small, '#ffd23f', 'left'); y += lineH;
+      const txt = L.rows.join('');
+      const spikes = (txt.match(/x/g) || []).length, bats = (txt.match(/[bv]/g) || []).length, shots = (txt.match(/[dulr]/g) || []).length;
+      const hz = [];
+      if (spikes) hz.push(spikes + ' ESPINHOS'); if (bats) hz.push(bats + ' MORCEGOS'); if (shots) hz.push(shots + ' FLECHAS');
+      if (L.fluid) hz.push(L.fluid.type === 'lava' ? 'LAVA SOBE' : 'AGUA SOBE');
+      if (L.boss) hz.push('VIDA ' + L.boss.hp);
+      F.text(ctx, hz.length ? hz.slice(0, 2).join('  ') : 'SEM PERIGOS', tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8;
+      if (hz.length > 2) { F.text(ctx, hz.slice(2).join('  '), tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8; }
+      F.text(ctx, 'ALTURA ' + (L.rows.length - 2) + '  PAR ' + L.par + ' MOV', tx, y, small, '#888899', 'left'); y += lineH;
+      if (L.boss) F.text(ctx, 'PEGUE O NUCLEO AZUL E BATA NELE', tx, y, small, '#8cf5ff', 'left');
+      this.drawButton(L.boss ? 'ENFRENTAR ▶' : 'JOGAR ▶', px + pw - u * 12 - 24, py + ph - (u * 7 + 20) / 2 - 8, u * 24 + 24, () => this.mapEnter(), wd.color, 'play');
     }
     renderShop() {
       const ctx = this.ctx, u = this.ui, cx = this.W / 2;

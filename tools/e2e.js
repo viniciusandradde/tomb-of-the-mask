@@ -61,6 +61,51 @@ const { spawn } = require('child_process');
   await page.screenshot({ path: path.join(out, '5-vitoria.png') });
   console.log('fase 1:', JSON.stringify(result));
 
+  // mapa de mundo: prévia da fase selecionada e navegação por deslize
+  await page.evaluate(() => { game.worldPage = 0; game.goto('levels'); });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(out, '3b-mapa.png') });
+  const mapa = await page.evaluate(() => { const s0 = game.sel; game.save.unlocked = 12; game.mapMove(1); game.mapMove(1); return { antes: s0, depois: game.sel, thumbs: Object.keys(game.thumbs).length }; });
+  console.log('mapa:', JSON.stringify(mapa));
+  await page.evaluate(() => { game.sel = 9; });
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(out, '3c-mapa-chefao.png') });
+
+  // chefão: núcleo -> tonto -> bater; porta trancada até derrotar
+  const chefe = await page.evaluate(async () => {
+    game.startLevel(9);
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await wait(300);
+    const ex = LEVELS[9].rows[0].indexOf('E');
+    const lockedBefore = game.blocked(ex, 0);
+    game.started = true;
+    const log = [];
+    for (let round = 0; round < 10 && game.boss.hp > 0; round++) {
+      game.spawnCore();
+      const c = game.core; const p = game.player;
+      p.cx = c.x; p.cy = c.y; p.x = c.x + 0.5; p.y = c.y + 0.5; p.moving = false;
+      await wait(80);
+      const stun = game.boss.stun;
+      // teleporta para dentro do chefe
+      p.cx = Math.floor(game.boss.x); p.cy = 2; p.x = game.boss.x; p.y = 2.5; p.invul = 0;
+      await wait(120);
+      log.push({ round, stun: +stun.toFixed(1), hp: game.boss.hp, state: game.state });
+      if (game.state !== 'play') break;
+      await wait(1200);
+    }
+    await wait(1500);
+    return { lockedBefore, lockedAfter: game.blocked(ex, 0), hp: game.boss.hp, dead: game.boss.dead, state: game.state, log };
+  });
+  console.log('chefão:', JSON.stringify(chefe));
+  await page.screenshot({ path: path.join(out, '4b-chefao.png') });
+  // chefe ativo (nova instância) para a captura com vida cheia
+  await page.evaluate(() => { game.startLevel(80); game.started = true; });
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: path.join(out, '4c-chefao-mestre.png') });
+  // encostar no chefe sem estar tonto mata
+  const morte = await page.evaluate(async () => { const p = game.player; p.invul = 0; p.cx = Math.floor(game.boss.x); p.cy = 2; p.x = game.boss.x; p.y = 2.5; await new Promise((r) => setTimeout(r, 200)); return { state: game.state, cause: game.deathCause }; });
+  console.log('encostar no chefe:', JSON.stringify(morte));
+
   // modo lúdico: morrer em um espinho mostra "OPA!" e a fase reinicia igual
   const ludico = await page.evaluate(async () => {
     game.save.kids = true; game.startLevel(12);
@@ -111,5 +156,7 @@ const { spawn } = require('child_process');
   srv.kill();
   if (errors.length) { console.log('ERROS DE CONSOLE:'); errors.forEach((e) => console.log(' -', e)); process.exit(1); }
   if (result.state !== 'win') { console.log('FALHA: fase 1 não foi vencida'); process.exit(1); }
+  if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play') { console.log('FALHA: chefão'); process.exit(1); }
+  if (morte.state !== 'dead' || morte.cause !== 'chefao') { console.log('FALHA: contato com chefe deveria matar'); process.exit(1); }
   console.log('e2e ok; capturas em', out);
 })().catch((e) => { console.error(e); process.exit(1); });
