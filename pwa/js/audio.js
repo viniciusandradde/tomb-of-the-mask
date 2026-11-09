@@ -37,9 +37,37 @@
         this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55; this.musicGain.connect(this.master);
         this.noiseBuf = this.makeNoise();
       }
-      if (this.ctx.state === 'suspended') this.ctx.resume();
+      // iOS/Safari e Chrome exigem um gesto do usuário: tentamos retomar o contexto
+      // e tocamos um buffer silencioso (truque clássico de destravamento do iOS).
+      if (this.ctx.state !== 'running') {
+        try { this.ctx.resume(); } catch (e) { /* ignorado */ }
+        try {
+          const b = this.ctx.createBuffer(1, 1, 22050), src = this.ctx.createBufferSource();
+          src.buffer = b; src.connect(this.ctx.destination); src.start(0);
+        } catch (e) { /* ignorado */ }
+      }
+      // No iPhone, o WebAudio fica mudo com a chave lateral no silencioso; tocar um
+      // <audio> em loop (silencioso) muda a sessão de áudio e libera o som do jogo.
+      if (!this.silentEl && typeof document !== 'undefined') {
+        try {
+          const el = document.createElement('audio');
+          el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', '');
+          el.loop = true; el.volume = 0.01; el.preload = 'auto';
+          el.src = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+          el.play().catch(() => { this.silentEl = null; });
+          this.silentEl = el;
+        } catch (e) { this.silentEl = null; }
+      } else if (this.silentEl && this.silentEl.paused) {
+        this.silentEl.play().catch(() => {});
+      }
+      if (!this._stateHooked) {
+        this._stateHooked = true;
+        this.ctx.addEventListener('statechange', () => { if (this.ctx.state === 'running' && this.onReady) this.onReady(); });
+      }
       this.applyToggles();
+      if (this.ctx.state === 'running' && this.onReady) this.onReady();
     }
+    ready() { return !!this.ctx && this.ctx.state === 'running'; }
 
     applyToggles() {
       if (!this.ctx) return;
@@ -139,7 +167,7 @@
     click() { this.tone({ type: 'square', freq: 660, dur: 0.05, vol: 0.12 }); }
     star(i) { this.tone({ type: 'square', freq: NOTE(84 + i * 4), dur: 0.2, vol: 0.2 }); this.noise({ dur: 0.08, vol: 0.08, hp: 3000 }); }
     lavaWarn() { this.tone({ type: 'square', freq: 110, to: 90, dur: 0.3, vol: 0.12 }); }
-    unlock() { for (let i = 0; i < 4; i++) this.tone({ type: 'triangle', freq: NOTE(60 + i * 5), dur: 0.3, vol: 0.2, at: i * 0.12 }); }
+    buy() { for (let i = 0; i < 4; i++) this.tone({ type: 'triangle', freq: NOTE(60 + i * 5), dur: 0.3, vol: 0.2, at: i * 0.12 }); } // jingle de compra
 
     // --- música -----------------------------------------------------------
     // Cada "track" é gerada deterministicamente a partir de um seed, então
