@@ -1473,7 +1473,7 @@
       this.drawButton('⚙ OPCOES', cx, by + u * 48, w, () => this.goto('settings'), '#8cf5ff', 't4');
       this.drawButton(this.kids() ? '\u2665 MODO: LUDICO' : 'MODO: CLASSICO', cx, by + u * 64, w, () => { this.save.kids = !this.save.kids; Save.write(); this.buttons = []; if (this.save.kids) this.speak('Modo lúdico ligado!'); }, this.kids() ? '#ff4fa3' : '#888899', 't5');
       if (!this.audio.ready() && Math.floor(this.t * 2) % 2 === 0) F.text(ctx, '\u266A TOQUE PARA ATIVAR O SOM', cx, this.H - u * 27 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
-      if (this.save.wbCfg && this.save.wbCfg.medals) F.text(ctx, '\u2600 MISSOES DE BRINCAR CUMPRIDAS: ' + this.save.wbCfg.medals, cx, this.H - u * 36 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
+      if (this.drawStickerBoard && this.save.wbCfg && this.save.wbCfg.stickers && this.save.wbCfg.stickers.length) this.drawStickerBoard(cx, by + u * 76);
       F.text(ctx, 'RECORDE ARCADE ' + this.save.arcadeBest + '   FASES ' + Math.min(this.save.unlocked - 1, root.LEVELS.length) + '/' + root.LEVELS.length, cx, this.H - u * 9 - 8, Math.max(1, u - 1), '#888899', 'center');
       this.buttons = this.buttons.filter((b) => b.id !== 'pause');
     }
