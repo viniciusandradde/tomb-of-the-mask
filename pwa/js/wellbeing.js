@@ -77,7 +77,8 @@
     goodnight: 'Que dia de aventuras! Agora a Máscara vai dormir até amanhã. Boa noite, [NOME]!',
     parentQuestions: [[6, 7], [8, 7], [9, 6], [7, 7], [8, 9], [6, 9]],
   };
-  const LIMITS = [10, 15, 20, 30], BREAKS = [10, 15, 20, 30], CYCLES = [1, 2, 3];
+  const LIMITS = [10, 15, 20, 30, 45, 60, 90, 120], BREAKS = [10, 15, 20, 30], CYCLES = [1, 2, 3];
+  const fmtMin = (m) => m < 60 ? m + ' MIN' : m === 60 ? '1 HORA' : m === 90 ? '1H30' : (m / 60) + ' HORAS';
   const today = () => new Date().toISOString().slice(0, 10);
 
   // ------------------------------------------------------------------ estado
@@ -262,8 +263,8 @@
     const w = Math.min(this.W * 0.9, 380), step = Math.min(u * 7 + 26, (this.H - 16 - u * 26 - u * 7 - 110) / 8); let y = 16 + u * 26;
     const saveCfg = () => { try { localStorage.setItem('tumba-da-mascara-save-v1', JSON.stringify(this.save)); } catch (e) { /* ignorado */ } this.buttons = []; };
     this.drawButton('MISSAO DE BRINCAR: ' + (cfg.enabled ? 'LIGADA' : 'DESLIGADA'), cx, y, w, () => { cfg.enabled = !cfg.enabled; saveCfg(); }, cfg.enabled ? '#7fc33a' : '#ff3b3b', 'pe'); y += step;
-    this.drawButton('TEMPO DE JOGO: ' + cfg.limitMin + ' MIN', cx, y, w, () => { cfg.limitMin = LIMITS[(LIMITS.indexOf(cfg.limitMin) + 1) % LIMITS.length]; saveCfg(); }, '#8cf5ff', 'pl'); y += step;
-    this.drawButton('TEMPO DA PAUSA: ' + cfg.breakMin + ' MIN', cx, y, w, () => { cfg.breakMin = BREAKS[(BREAKS.indexOf(cfg.breakMin) + 1) % BREAKS.length]; saveCfg(); }, '#8cf5ff', 'pb'); y += step;
+    this.drawButton('TEMPO DE JOGO: ' + fmtMin(cfg.limitMin), cx, y, w, () => { const i = LIMITS.indexOf(cfg.limitMin); cfg.limitMin = LIMITS[(i + 1) % LIMITS.length]; saveCfg(); }, '#8cf5ff', 'pl'); y += step;
+    this.drawButton('TEMPO DA PAUSA: ' + fmtMin(cfg.breakMin), cx, y, w, () => { cfg.breakMin = BREAKS[(BREAKS.indexOf(cfg.breakMin) + 1) % BREAKS.length]; saveCfg(); }, '#8cf5ff', 'pb'); y += step;
     this.drawButton('AVENTURAS POR DIA: ' + cfg.cyclesPerDay, cx, y, w, () => { cfg.cyclesPerDay = CYCLES[(CYCLES.indexOf(cfg.cyclesPerDay) + 1) % CYCLES.length]; saveCfg(); }, '#8cf5ff', 'pcy'); y += step;
     this.drawButton('NOME: ' + (cfg.childName ? cfg.childName.toUpperCase() : 'TOQUE PARA ESCREVER'), cx, y, w, () => { const n = root.prompt ? root.prompt('Nome da criança (usado nas falas):', cfg.childName || '') : null; if (n !== null) { cfg.childName = String(n).slice(0, 16); saveCfg(); } }, '#8cf5ff', 'pn'); y += step;
     this.drawButton('TAMBEM NO MODO CLASSICO: ' + (cfg.enabledClassic ? 'SIM' : 'NAO'), cx, y, w, () => { cfg.enabledClassic = !cfg.enabledClassic; saveCfg(); }, '#8cf5ff', 'pc'); y += step;
