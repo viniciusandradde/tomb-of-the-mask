@@ -21,7 +21,8 @@ Sem instalar nada além do Node. Também há `Dockerfile` e um workflow de GitHu
 ## Conteúdo
 
 - 81 fases em 9 mundos (Catacumba, Cripta Azul, Selva Perdida, Vulcão, Abismo, Templo Dourado, Sombras, Núcleo), todas validadas por um solver: saída e coletáveis sempre alcançáveis e **nenhum beco sem saída** (de qualquer parada, a saída continua alcançável).
-- Mapa de mundo estilo Mario com prévia de cada fase; chefão no fim de cada mundo e Chefão Mestre final para zerar o jogo.
+- Mapa de mundo estilo Super Mario World (terreno, caminho de pedra, portas, tochas, decorações por mundo, personagem caminhando) com prévia de cada fase; chefões únicos com entrada cinematográfica e ataques telegrafados em fases; Chefão Mestre final para zerar o jogo.
+- Espinhos retráteis que saem dos blocos em ciclos, como no original.
 - Modo Arcade: coluna infinita para cima com espaço aberto, obstáculos e uma barreira piscante na cor do trecho que sobe em velocidade média. Encostou, perdeu.
 - 3 estrelas por fase, loja de máscaras com bônus, power-ups (escudo, congelar, ímã).
 - Música chiptune e efeitos sonoros gerados em tempo real (sem arquivos de áudio).

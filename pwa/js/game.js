@@ -206,6 +206,7 @@
       if (this.state === 'title') this.goto('worlds');
       else if (this.state === 'dead') this.restart();
       else if (this.state === 'win') this.nextLevel();
+      else if (this.state === 'bossintro' && this.skipBossIntro) this.skipBossIntro();
     }
     button(label, x, y, w, h, fn, opts) { this.buttons.push({ label, x, y, w, h, fn, opts: opts || {} }); }
 
@@ -238,6 +239,7 @@
       this.lastFrame = now();
       this.idleSince = null; this.hint = null; this.combo = 0;
       if (this.kids() && index === 0 && !this.spokeIntro) { this.spokeIntro = true; this.speak('Deslize o dedo para a máscara voar até a parede!'); }
+      if (L.boss && this.startBossIntro) this.startBossIntro();
     }
 
     startArcade() {
@@ -323,7 +325,7 @@
       if (mask.perkId === 'shield') this.player.shield = 1;
       if (mask.perkId === 'magnet') this.player.magnet = Infinity;
       this.score = 0; this.levelCoins = 0; this.dotsLeft = 0; this.timeStart = now(); this.elapsed = 0; this.moves = 0;
-      this.bats = []; this.shots = []; this.shooters = []; this.particles = [];
+      this.bats = []; this.shots = []; this.shooters = []; this.particles = []; this.traps = []; this.trapClock = 0;
       this.spawnEntities(this.grid.minY, this.grid.maxY);
       this.fluid = fluid ? { type: fluid.type, speed: fluid.speed, delay: fluid.delay, y: this.grid.maxY + 2, started: false, warned: false } : null;
       this.boss = null; this.core = null;
@@ -337,6 +339,8 @@
         if (c === T.BAT_H || c === T.BAT_V) {
           this.bats.push({ x: x + 0.5, y: y + 0.5, dx: c === T.BAT_H ? 1 : 0, dy: c === T.BAT_V ? 1 : 0, phase: Math.random() * 6 });
           this.grid.set(x, y, T.EMPTY);
+        } else if (c === T.TRAP) {
+          this.traps.push({ x, y, phase: (y % 3) * 0.8 }); // faixas sincronizadas por linha
         } else if (c in M.SHOOTERS) {
           this.shooters.push({ x, y, dx: M.SHOOTERS[c][0], dy: M.SHOOTERS[c][1], timer: 0.8 + Math.random() * SHOT_PERIOD });
         } else if (c === T.DOT) this.dotsLeft++;
@@ -379,6 +383,14 @@
       this.moves++; this.idleSince = this.t; this.hint = null;
       if (!this.started) { this.started = true; this.timeStart = now(); }
       this.audio.move();
+    }
+    // estado de um espinho retrátil no instante atual
+    trapState(tr) {
+      const PERIOD = 2.4, ph = (this.trapClock + tr.phase) % PERIOD;
+      if (ph < 1.3) return { ext: 0, warn: false, deadly: false };
+      if (ph < 1.6) return { ext: 0.18, warn: true, deadly: false };
+      if (ph < 2.3) return { ext: 1, warn: false, deadly: true };
+      return { ext: 1 - (ph - 2.3) / 0.1, warn: false, deadly: false };
     }
     // sólido para o deslize: paredes/atiradores e a porta da saída trancada pelo chefe
     blocked(x, y) {
@@ -574,6 +586,7 @@
       this.lastFrame = t;
       this.t += dt;
       if (this.state === 'play') this.update(dt);
+      else if ((this.state === 'bossintro' || this.state === 'bossdeath') && this.updateBossCine) this.updateBossCine(dt);
       else this.updateFx(dt);
       this.render();
       requestAnimationFrame(() => this.frame());
@@ -680,6 +693,12 @@
       }
       this.shots = this.shots.filter((s) => s.life > 0);
 
+      // espinhos retráteis: ciclo recolhido -> aviso -> estendido (mortal) -> recolhe
+      if (p.freeze <= 0) this.trapClock += dt;
+      for (const tr of this.traps) {
+        if (!p.dead && p.invul <= 0 && p.cx === tr.x && p.cy === tr.y && this.trapState(tr).deadly) { this.die('espinho'); return; }
+      }
+
       if (this.boss) this.updateBoss(dt);
 
       // lava / água
@@ -747,6 +766,8 @@
     enterCell(x, y) {
       const c = this.grid.get(x, y);
       if (c === T.SPIKE) { this.die('espinho'); return; }
+      if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); if (tr && this.trapState(tr).deadly && this.player.invul <= 0) { this.die('espinho'); return; } }
+      if (this.bossHazardAt && this.bossHazardAt(x, y)) { this.die('chefao'); return; }
       if (c === T.EXIT) { if (this.mode === 'stage') this.winLevel(); return; }
       if (c === T.DOT || c === T.COIN || c === T.SHIELD || c === T.FREEZE || c === T.MAGNET) this.collect(x, y, c);
     }
@@ -859,13 +880,14 @@
       ctx.save();
       ctx.fillStyle = '#05030a';
       ctx.fillRect(0, 0, W, H);
-      if (this.state === 'play' || this.state === 'pause' || this.state === 'dead' || this.state === 'win' || this.state === 'arcadeover') {
+      if (this.state === 'play' || this.state === 'pause' || this.state === 'dead' || this.state === 'win' || this.state === 'arcadeover' || this.state === 'bossintro' || this.state === 'bossdeath') {
         this.renderWorld();
         this.renderHud();
         if (this.state === 'pause') this.renderPause();
         if (this.state === 'dead') this.renderDead();
         if (this.state === 'win') this.renderWin();
         if (this.state === 'arcadeover') this.renderArcadeOver();
+        if ((this.state === 'bossintro' || this.state === 'bossdeath') && this.renderBossCine) this.renderBossCine();
       } else if (this.state === 'title') this.renderTitle();
       else if (this.state === 'worlds') this.renderWorlds();
       else if (this.state === 'levels') this.renderLevels();
@@ -957,7 +979,8 @@
         const px = ox + x * s, py = oy + y * s;
         if (c === T.DOT) { const d = Math.max(2, Math.round(s * 0.14)); ctx.fillStyle = this.worldAtRow(y).accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
         else if (c === T.COIN) this.drawCoin(px, py, pulse);
-        else if (c === T.SPIKE) this.drawSpike(px, py, x, y);
+        else if (c === T.SPIKE) this.drawSpike(px, py, x, y, 1, false);
+        else if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); const st = tr ? this.trapState(tr) : { ext: 0 }; this.drawSpike(px, py, x, y, st.ext, st.warn, true); }
         else if (c === T.EXIT) this.drawExit(px, py, pulse, this.bossAlive());
         else if (c === T.SHIELD) this.drawPowerup(px, py, '#8cf5ff', 'S', pulse);
         else if (c === T.FREEZE) this.drawPowerup(px, py, '#ffffff', '*', pulse);
@@ -1039,8 +1062,9 @@
       ctx.fillStyle = '#fff6c2'; ctx.fillRect(-k / 2 + k * 0.2, -k / 2 + k * 0.2, k * 0.3, k * 0.3);
       ctx.restore();
     }
-    drawSpike(px, py, x, y) {
+    drawSpike(px, py, x, y, ext, warn, trap) {
       const ctx = this.ctx, s = this.tile;
+      if (ext === undefined) ext = 1;
       // espinhos apontam para fora da parede onde estão presos
       const g = this.grid;
       let base = [0, 1];
@@ -1048,13 +1072,20 @@
       else if (M.isSolid(g.get(x - 1, y))) base = [-1, 0]; else if (M.isSolid(g.get(x + 1, y))) base = [1, 0];
       ctx.save(); ctx.translate(px + s / 2, py + s / 2);
       ctx.rotate(Math.atan2(base[1], base[0]) - Math.PI / 2);
-      ctx.fillStyle = '#e8e8f0';
-      const n = 3, wdt = s / n;
-      for (let i = 0; i < n; i++) {
-        const bx = -s / 2 + i * wdt;
-        ctx.beginPath(); ctx.moveTo(bx, s / 2); ctx.lineTo(bx + wdt / 2, -s * 0.3); ctx.lineTo(bx + wdt, s / 2); ctx.closePath(); ctx.fill();
+      if (trap) {
+        // boca do bloco: ranhura escura de onde os espinhos saem
+        ctx.fillStyle = '#0a0810'; ctx.fillRect(-s / 2 + 2, s / 2 - s * 0.22, s - 4, s * 0.22);
+        if (warn && Math.floor(this.t * 16) % 2 === 0) { ctx.fillStyle = '#ff3b3b'; ctx.fillRect(-s / 2 + 2, s / 2 - s * 0.22, s - 4, 2); }
       }
-      ctx.fillStyle = '#9a9aa8'; ctx.fillRect(-s / 2, s / 2 - s * 0.14, s, s * 0.14);
+      if (ext > 0) {
+        ctx.fillStyle = warn ? '#ffb0b0' : '#e8e8f0';
+        const n = 3, wdt = s / n, tip = s / 2 - (s * 0.8) * ext;
+        for (let i = 0; i < n; i++) {
+          const bx = -s / 2 + i * wdt;
+          ctx.beginPath(); ctx.moveTo(bx, s / 2); ctx.lineTo(bx + wdt / 2, tip); ctx.lineTo(bx + wdt, s / 2); ctx.closePath(); ctx.fill();
+        }
+      }
+      if (!trap) { ctx.fillStyle = '#9a9aa8'; ctx.fillRect(-s / 2, s / 2 - s * 0.14, s, s * 0.14); }
       ctx.restore();
     }
     drawExit(px, py, pulse, locked) {
@@ -1266,7 +1297,7 @@
     renderHud() {
       const ctx = this.ctx, u = this.ui, pad = 8;
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, this.W, u * 7 + pad * 2 + 4);
-      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.boss ? (this.level.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO') : 'FASE ' + this.level.n;
+      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.boss ? (this.level.boss.master ? 'MESTRE' : 'CHEFAO') : 'FASE ' + this.level.n;
       F.text(ctx, label, pad, pad, u, this.world.accent, 'left');
       const sc = this.mode === 'arcade' ? this.arcadeScore() : this.score;
       F.text(ctx, String(sc).padStart(6, '0'), this.W / 2, pad, u, '#ffffff', 'center');
@@ -1611,9 +1642,9 @@
       const st = this.save.stars[idx] || 0;
       F.text(ctx, '*'.repeat(st) + '.'.repeat(3 - st) + '  ' + (this.save.best[idx] ? 'MELHOR ' + this.save.best[idx] : 'NOVA'), tx, y, small, '#ffd23f', 'left'); y += lineH;
       const txt = L.rows.join('');
-      const spikes = (txt.match(/x/g) || []).length, bats = (txt.match(/[bv]/g) || []).length, shots = (txt.match(/[dulr]/g) || []).length;
+      const spikes = (txt.match(/x/g) || []).length, bats = (txt.match(/[bv]/g) || []).length, shots = (txt.match(/[dulr]/g) || []).length, traps = (txt.match(/t/g) || []).length;
       const hz = [];
-      if (spikes) hz.push(spikes + ' ESPINHOS'); if (bats) hz.push(bats + ' MORCEGOS'); if (shots) hz.push(shots + ' FLECHAS');
+      if (spikes) hz.push(spikes + ' ESPINHOS'); if (traps) hz.push(traps + ' ESPINHOS MOVEIS'); if (bats) hz.push(bats + ' MORCEGOS'); if (shots) hz.push(shots + ' FLECHAS');
       if (L.fluid) hz.push(L.fluid.type === 'lava' ? 'LAVA SOBE' : 'AGUA SOBE');
       if (L.boss) hz.push('VIDA ' + L.boss.hp);
       F.text(ctx, hz.length ? hz.slice(0, 2).join('  ') : 'SEM PERIGOS', tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8;

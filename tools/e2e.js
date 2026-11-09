@@ -76,6 +76,7 @@ const { spawn } = require('child_process');
     game.startLevel(9);
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await wait(300);
+    const introState = game.state; game.skipBossIntro(); await wait(100);
     const ex = LEVELS[9].rows[0].indexOf('E');
     const lockedBefore = game.blocked(ex, 0);
     game.started = true;
@@ -93,18 +94,37 @@ const { spawn } = require('child_process');
       if (game.state !== 'play') break;
       await wait(1200);
     }
-    await wait(1500);
-    return { lockedBefore, lockedAfter: game.blocked(ex, 0), hp: game.boss.hp, dead: game.boss.dead, state: game.state, log };
+    const deathState = game.state;
+    await wait(3600);
+    return { introState, deathState, lockedBefore, lockedAfter: game.blocked(ex, 0), hp: game.boss.hp, dead: game.boss.dead, state: game.state, log };
   });
   console.log('chefão:', JSON.stringify(chefe));
   await page.screenshot({ path: path.join(out, '4b-chefao.png') });
   // chefe ativo (nova instância) para a captura com vida cheia
-  await page.evaluate(() => { game.startLevel(80); game.started = true; });
+  await page.evaluate(() => { game.startLevel(80); });
+  await page.waitForTimeout(2200);
+  await page.screenshot({ path: path.join(out, '4d-chefao-intro.png') });
+  await page.evaluate(() => { game.skipBossIntro(); game.started = true; });
   await page.waitForTimeout(2500);
   await page.screenshot({ path: path.join(out, '4c-chefao-mestre.png') });
   // encostar no chefe sem estar tonto mata
   const morte = await page.evaluate(async () => { const p = game.player; p.invul = 0; p.cx = Math.floor(game.boss.x); p.cy = 2; p.x = game.boss.x; p.y = 2.5; await new Promise((r) => setTimeout(r, 200)); return { state: game.state, cause: game.deathCause }; });
   console.log('encostar no chefe:', JSON.stringify(morte));
+
+  // espinhos retráteis: matam só quando estendidos
+  const trap = await page.evaluate(async () => {
+    const idx = LEVELS.findIndex((L) => L.rows.join('').includes('t'));
+    game.startLevel(idx); game.started = true;
+    const tr = game.traps[0]; const p = game.player;
+    p.cx = tr.x; p.cy = tr.y; p.x = tr.x + 0.5; p.y = tr.y + 0.5; p.moving = false;
+    game.trapClock = 0.2 - tr.phase; // recolhido
+    await new Promise((r) => setTimeout(r, 120));
+    const safe = game.state;
+    game.trapClock = 1.8 - tr.phase; // estendido
+    await new Promise((r) => setTimeout(r, 120));
+    return { idx, traps: game.traps.length, safe, after: game.state, cause: game.deathCause };
+  });
+  console.log('espinhos retráteis:', JSON.stringify(trap));
 
   // modo lúdico: morrer em um espinho mostra "OPA!" e a fase reinicia igual
   const ludico = await page.evaluate(async () => {
@@ -156,7 +176,8 @@ const { spawn } = require('child_process');
   srv.kill();
   if (errors.length) { console.log('ERROS DE CONSOLE:'); errors.forEach((e) => console.log(' -', e)); process.exit(1); }
   if (result.state !== 'win') { console.log('FALHA: fase 1 não foi vencida'); process.exit(1); }
-  if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play') { console.log('FALHA: chefão'); process.exit(1); }
+  if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play' || chefe.introState !== 'bossintro' || chefe.deathState !== 'bossdeath') { console.log('FALHA: chefão'); process.exit(1); }
+  if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
   if (morte.state !== 'dead' || morte.cause !== 'chefao') { console.log('FALHA: contato com chefe deveria matar'); process.exit(1); }
   console.log('e2e ok; capturas em', out);
 })().catch((e) => { console.error(e); process.exit(1); });
