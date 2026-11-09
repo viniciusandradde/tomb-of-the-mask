@@ -41,7 +41,7 @@ depois fica em silêncio. Ao voltar, botão VOLTEI! e um **hi five** com confete
 Aventuras. Duas aventuras por dia (ajustável); depois, "Até amanhã".
 
 **Área dos pais:** em Opções > "PAUSA SAUDÁVEL (PAIS)", ou segurando 3 segundos a engrenagem nas telas da pausa, e
-respondendo uma multiplicação. Lá: ligar/desligar, tempo de jogo, tempo da pausa, aventuras por dia, nome da criança (entra
+respondendo uma multiplicação. Lá: ligar/desligar, tempo de jogo (de 10 minutos até 2 horas), tempo da pausa, aventuras por dia, nome da criança (entra
 nas falas), "pausar agora", "liberar agora", zerar contador, usar também no Modo Clássico.
 
 Recomendação (SBP/OMS/AAP): até 1 hora de tela por dia dos 2 aos 5 anos, com adulto por perto, nunca na hora de dormir.

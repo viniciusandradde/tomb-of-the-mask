@@ -1417,7 +1417,7 @@
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
       if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
       const w = Math.min(this.W * 0.86, 360), bh = u * 7 + 44;
-      this.drawBigButton('JOGAR DE NOVO', '\u21BB', cx, cy + u * 18 + bh / 2, w, () => this.restart(), '#2e9e4f', 'd0');
+      this.drawBigButton('JOGAR DE NOVO', '\u25B6', cx, cy + u * 18 + bh / 2, w, () => this.restart(), '#2e9e4f', 'd0');
       this.drawBigButton('VOLTAR AO MAPA', '\u2302', cx, cy + u * 18 + bh * 1.5 + 14, w, () => { this.audio.stopMusic(); this.goto('levels'); }, '#3f7dff', 'd1');
       if (this.player.shield <= 0 && this.save.inv && this.save.inv.shield > 0) F.text(this.ctx, 'DICA: 2 TOQUES NA TELA LIGAM O ESCUDO', cx, cy + u * 18 + bh * 2 + 30, Math.max(1, u - 1), '#8cf5ff', 'center');
     }
@@ -1460,7 +1460,7 @@
       F.text(this.ctx, 'PONTOS ' + this.arcadeScore(), cx, cy - u * 4, u, '#ffffff', 'center');
       F.text(this.ctx, (this.newBest ? 'NOVO RECORDE! ' : 'RECORDE ') + this.save.arcadeBest, cx, cy + u * 8, u, '#ffd23f', 'center');
       const w = Math.min(this.W * 0.86, 360), bh = u * 7 + 44;
-      this.drawBigButton('JOGAR DE NOVO', '\u21BB', cx, cy + u * 20 + bh / 2, w, () => this.startArcade(), '#2e9e4f', 'a1');
+      this.drawBigButton('JOGAR DE NOVO', '\u25B6', cx, cy + u * 20 + bh / 2, w, () => this.startArcade(), '#2e9e4f', 'a1');
       this.drawBigButton('VOLTAR AO MENU', '\u2302', cx, cy + u * 20 + bh * 1.5 + 14, w, () => { this.audio.stopMusic(); this.goto('title'); }, '#3f7dff', 'a2');
     }
 
