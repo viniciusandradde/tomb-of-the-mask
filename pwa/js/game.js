@@ -151,6 +151,7 @@
         else if (dist >= REARM) { swipe(dx, dy); sx = e.clientX; sy = e.clientY; }
       });
       const up = (e) => {
+        this.audio.unlock();
         if (!this.pointer) return;
         this.pointer.down = false;
         const dx = e.clientX - sx, dy = e.clientY - sy;
@@ -170,6 +171,16 @@
         else if (k === 'Enter' || k === ' ') { e.preventDefault(); this.confirm(); }
         else if (k === 'r' || k === 'R') { if (this.state === 'play' || this.state === 'dead') this.restart(); }
       });
+      // iOS: 'touchend' e 'click' são os gestos que liberam o áudio
+      c.addEventListener('touchend', () => this.audio.unlock(), { passive: true });
+      c.addEventListener('click', () => this.audio.unlock());
+      // quando o contexto de áudio finalmente ficar ativo, começa a música da tela atual
+      this.audio.onReady = () => {
+        if (this.audio.music) return;
+        const menus = ['title', 'worlds', 'levels', 'shop', 'settings'];
+        if (menus.includes(this.state)) this.audio.startMusic(99);
+        else if (this.world) this.audio.startMusic(this.world.music);
+      };
       root.addEventListener('blur', () => { if (this.state === 'play') this.togglePause(true); });
       document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'play') this.togglePause(true); });
     }
@@ -1208,6 +1219,7 @@
       this.drawButton('MASCARAS  $' + this.save.coins, cx, by + u * 32, w, () => this.goto('shop'), '#ffd23f', 't3');
       this.drawButton('⚙ OPCOES', cx, by + u * 48, w, () => this.goto('settings'), '#8cf5ff', 't4');
       this.drawButton(this.kids() ? '\u2665 MODO: LUDICO' : 'MODO: CLASSICO', cx, by + u * 64, w, () => { this.save.kids = !this.save.kids; Save.write(); this.buttons = []; if (this.save.kids) this.speak('Modo lúdico ligado!'); }, this.kids() ? '#ff4fa3' : '#888899', 't5');
+      if (!this.audio.ready() && Math.floor(this.t * 2) % 2 === 0) F.text(ctx, '\u266A TOQUE PARA ATIVAR O SOM', cx, this.H - u * 27 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
       F.text(ctx, 'RECORDE ARCADE ' + this.save.arcadeBest + '   FASES ' + Math.min(this.save.unlocked - 1, root.LEVELS.length) + '/' + root.LEVELS.length, cx, this.H - u * 9 - 8, Math.max(1, u - 1), '#888899', 'center');
       this.buttons = this.buttons.filter((b) => b.id !== 'pause');
     }
@@ -1307,7 +1319,7 @@
         F.text(ctx, tag, x + w - 10, y + h / 2 - u * 3.5, u, equipped ? '#8cf5ff' : owned ? '#ffffff' : (this.save.coins >= m.cost ? '#ffd23f' : '#ff3b3b'), 'right');
         if (!this.buttons.find((b) => b.id === 'm' + i)) this.buttons.push({ id: 'm' + i, x, y, w, h, fn: () => {
           if (owned) { this.save.mask = m.id; Save.write(); this.buttons = []; return; }
-          if (this.save.coins >= m.cost) { this.save.coins -= m.cost; this.save.masks.push(m.id); this.save.mask = m.id; Save.write(); this.audio.unlock(); this.buttons = []; }
+          if (this.save.coins >= m.cost) { this.save.coins -= m.cost; this.save.masks.push(m.id); this.save.mask = m.id; Save.write(); this.audio.buy(); this.buttons = []; }
           else this.audio.bump();
         } });
       });
@@ -1336,6 +1348,7 @@
         else { this.confirmReset = true; this.buttons = []; }
       }, this.confirmReset ? '#ff3b3b' : '#888899', 'reset');
       if (this.confirmReset) F.text(ctx, 'TOQUE DE NOVO PARA CONFIRMAR', cx, top + opts.length * step + 10 + u * 8, Math.max(1, u - 1), '#ff3b3b', 'center');
+      F.text(ctx, this.audio.ready() ? 'AUDIO: ATIVO' : 'AUDIO: BLOQUEADO PELO NAVEGADOR. TOQUE DE NOVO.', cx, this.H - u * 46, Math.max(1, u - 1), this.audio.ready() ? '#7fc33a' : '#ff3b3b', 'center');
       F.text(ctx, 'MODO LUDICO: VOZ, FESTA E CARINHO.', cx, this.H - u * 38, Math.max(1, u - 1), '#ff4fa3', 'center');
       F.text(ctx, 'A DIFICULDADE E SEMPRE A MESMA.', cx, this.H - u * 30, Math.max(1, u - 1), '#ff4fa3', 'center');
       F.text(ctx, 'TECLADO: SETAS/WASD  P=PAUSA  R=REINICIAR', cx, this.H - u * 22, Math.max(1, u - 1), '#888899', 'center');
