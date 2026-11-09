@@ -171,6 +171,58 @@ retráteis (até 7), morcegos (até 6), flechas (até 6), lava/água mais rápid
 longos. Chefes finais com mais vida (Rei das Sombras 6, Coração do Núcleo 7, Mestre 10) e ataques mais frequentes. Se um
 conjunto de parâmetros não gera fase justa, o gerador reduz os perigos em passos de 12% até conseguir.
 
+### 3.2.5 Missão de Brincar (pausa saudável) — metodologia proposta por dois especialistas
+
+Dois especialistas (psicopedagogia da primeira infância e design de diversão digital) analisaram o pedido e propuseram a
+metodologia implementada. Fundamentos: SBP, AAP e OMS recomendam no máximo 1 hora de tela por dia dos 2 aos 5 anos, com
+adulto por perto; o estudo "Screen Time Tantrums" (Hiniker et al., CHI 2016) mostrou que transições mediadas pelo próprio
+aparelho, em pontos naturais de parada e com a próxima atividade já anunciada, geram menos conflito do que avisos do adulto
+e contagens regressivas; elogio de processo (Gunderson et al., 2013) sustenta a persistência; aos 4 anos a criança
+co-regula com o adulto, então o jogo avisa e convida, mas quem conduz a transição é o adulto.
+
+Fluxo (padrão 15 min de jogo, 15 min de pausa, 2 aventuras por dia; tudo ajustável pelos pais, inclusive tempo de jogo de
+10 min a 2 horas):
+
+1. **Um único aviso prévio**, ~3 minutos antes, falado só no fim de uma fase (vitória ou derrota), nunca no meio:
+   "Mais uma fase e vem uma missão especial". Um sol discreto aparece no canto.
+2. **Ao bater o tempo**, a missão abre no fim da fase atual. Teto duro de +2 minutos para fases longas e Arcade; se a
+   próxima fase é um chefão e o tempo está acabando, a missão vem antes ("o chefão espera você").
+3. **Tela da missão**: ilustração grande em pixel art (carrinho, herói, escudo, blocos, água, lápis, coração, sol, livro,
+   urso), a Máscara companheira, texto falado em voz pt-BR com um sininho antes, botão "ouvir de novo", e a **mão** como botão
+   ("toque na mão e vá"). Um chime distinto avisa o adulto. 12 missões (corrida de carrinhos, Homem de Ferro voa, escudo do
+   Capitão, pulos, água de herói, desenho do labirinto, abraço de equipe, caça na janela, guardar o tesouro, livro ou dança,
+   chefão de verdade, amigo da selva), sorteadas sem repetir as 3 últimas, com peso maior para o tema do mundo atual e para
+   os brinquedos favoritos, e missões calmas (janela, livro, água) à noite.
+4. **Pausa em andamento**: a Máscara dorme (zZz), um sol atravessa o céu até uma casinha (tempo sem números). Sem sons
+   espontâneos. Se a criança insistir tocando, no máximo **4 falas de redirecionamento** por pausa, com 20 s de intervalo,
+   escalando com carinho (convite, lembrete, "eu fico esperando", "chame um adulto" + chime); depois, só um pulso visual.
+   O tempo da pausa nunca reinicia. Fechar e reabrir o app mantém a pausa (relógio de parede persistido).
+5. **Retorno**: quando a pausa termina, aparece o botão "VOLTEI!"; a seguir a tela do **hi five** com uma mão gigante
+   pulsando; tocar na mão (ou em toda a metade inferior) dispara confete, som, vibração e um parabéns falado; o jogo volta ao
+   mapa onde parou e o contador zera.
+6. **Recompensa sem moedas**: uma figurinha da missão no **Quadro de Aventuras** da tela inicial (decorativa) e, com 5
+   figurinhas, a máscara "Sonequinha" grátis. Nada compra fases nem itens.
+7. **Segunda aventura do dia** avisa que é a última; depois do hi five aparece "Até amanhã" (lua, Máscara dormindo) e só o
+   adulto libera. No dia seguinte tudo zera.
+8. **Área dos pais**: em Opções, ou segurando 3 s a engrenagem nas telas da pausa, mais uma conta de multiplicação.
+   Ligar/desligar (ligada por padrão no Modo Lúdico, opcional no Clássico), tempo de jogo (10, 15, 20, 30, 45 min, 1 h,
+   1h30 ou 2 h; o adulto decide), tempo da pausa (10/15/20/30), aventuras por dia (1/2/3), nome da criança (entra nas
+   falas), "pausar agora" (missão no fim da fase), "liberar agora" (frase neutra, sem julgamento) e zerar o contador.
+
+Erros evitados por recomendação dos especialistas: bloqueio no meio da fase, muitos avisos ou contagem regressiva, mensagens
+longas com "porquês", tom de culpa, aparelho que fala a cada toque, reiniciar a pausa como punição, recompensa em moedas do
+jogo, vermelho e "X" nas telas da pausa.
+
+Fontes: [SBP #MenosTelas #MaisSaúde](https://www.sbp.com.br/fileadmin/user_upload/_22246c-ManOrient_-__MenosTelas__MaisSaude.pdf),
+[AAP](https://www.healio.com/news/pediatrics/20161020/aap-recommends-1-hour-limit-on-digital-media-use-for-preschoolers),
+[OMS 2019](https://www.who.int/news/item/24-04-2019-to-grow-up-healthy-children-need-to-sit-less-and-play-more),
+[Hiniker et al. 2016](https://www.washington.edu/news/2016/05/05/two-minute-warnings-make-kids-screen-time-tantrums-worse/),
+[Gunderson et al. 2013](https://pmc.ncbi.nlm.nih.gov/articles/PMC3655123),
+[Co-regulação (OPRE)](https://acf.gov/opre/report/co-regulation-birth-through-young-adulthood-practice-brief),
+[Nintendo Switch limites de tempo](https://www.nintendo.com/sg/parents/switch/time/settings.html),
+[YouTube Kids timer](https://support.google.com/youtubekids/answer/6130558?hl=en),
+[Pokémon Smile](https://nintendowire.com/news/2020/06/18/pokemon-smile-offers-a-cute-approach-to-dental-hygiene-for-youngsters/).
+
 ### 3.2.6 Tela de derrota pensada para a criança
 
 Como no original, ao perder aparecem **dois botões grandes** ocupando a largura da tela: **JOGAR DE NOVO** (verde, ícone
