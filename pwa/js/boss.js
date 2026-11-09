@@ -220,10 +220,16 @@
       if (stunned && b.hitCd <= 0) {
         b.hp--; b.hitCd = 1; b.flash = 0.5; b.stun = Math.min(b.stun, 0.9);
         p.invul = Math.max(p.invul, 1.2); p.moving = false; p.queued = null;
-        // recuo seguro: volta para a linha de baixo do corredor e, se houver
-        // passagem, desliza para o labirinto (nunca dentro de uma parede)
-        p.cx = clamp(p.cx, 1, COLS - 2); p.cy = 3; p.x = p.cx + 0.5; p.y = 3.5;
-        if (!this.blocked(p.cx, 4)) this.beginMove([0, 1]);
+        // recuo seguro: vai para a coluna mais próxima que tem passagem no chão
+        // do corredor e desliza para o labirinto (longe do chefe, nunca em parede)
+        let col = clamp(p.cx, 1, COLS - 2);
+        for (let d = 0; d < COLS; d++) {
+          const l = col - d, r = col + d;
+          if (l >= 1 && !this.blocked(l, 4)) { col = l; break; }
+          if (r <= COLS - 2 && !this.blocked(r, 4)) { col = r; break; }
+        }
+        p.cx = col; p.cy = 3; p.x = col + 0.5; p.y = 3.5;
+        if (!this.blocked(col, 4)) this.beginMove([0, 1]);
         this.audio.shieldHit(); this.burst(b.x, b.y, 30, this.world.color, 4); this.burst(b.x, b.y, 12, '#ffffff', 3);
         if (this.save.shake) this.shake = 0.3;
         this.score += 250;
@@ -246,8 +252,10 @@
     }
   };
   G.bossDefeated = function () {
-    const b = this.boss;
+    const b = this.boss, p = this.player;
     b.dead = true; b.deathT = 0; b.stun = 0; b.pending = null; b.slam = null; b.dark = 0;
+    // o jogador para onde está (sem recuo) para assistir à derrota
+    p.moving = false; p.queued = null; p.x = p.cx + 0.5; p.y = p.cy + 0.5;
     this.shots = []; this.bats = []; this.core = null; this.beams = []; this.tempSpikes = [];
     this.score += 1000;
     this.state = 'bossdeath'; this.buttons = [];
