@@ -42,6 +42,7 @@ function params(w, i) {
     shields: (i % 3 === 2 && w >= 1) ? 1 : 0,
     freezes: (w >= 3 && i % 4 === 1) ? 1 : 0,
     magnets: (w >= 2 && i % 5 === 3) ? 1 : 0,
+    traps: w >= 1 ? Math.min(5, Math.round(0.5 + w * 0.5 + t * 2)) : (i >= 5 ? 1 : 0),
     minMoves: 8 + w + Math.round(t * 6),
     maxMoves: 70,
     dotSkip: 0,
@@ -68,7 +69,7 @@ for (let w = 0; w < WORLDS.length; w++) {
     const isBoss = WORLDS[w].master || i === 9;
     if (isBoss) {
       const boss = WORLDS[w].master ? MASTER : BOSSES[w];
-      const p = { h: 20 + Math.min(w, 8), wallDensity: 0.12 + w * 0.006, spikes: Math.min(4, 1 + Math.floor(w / 2)), coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
+      const p = { h: 16 + Math.min(w, 4), wallDensity: 0.12 + w * 0.006, spikes: Math.min(4, 1 + Math.floor(w / 2)), traps: 1 + Math.floor(w / 3), coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
       let result = null, seed = seedBase + n * 7919 + 500;
       for (let k = 0; k < 30 && !result; k++, seed += 17) result = Maze.generateArena(Object.assign({ seed }, p), Maze.rng(seed));
       if (!result) throw new Error('Não consegui gerar a arena ' + n);

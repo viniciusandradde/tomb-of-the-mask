@@ -97,11 +97,40 @@ até a saída. O gerador:
 - Entrada: deslize reconhecido com 10 px (antes 24), flick curto de 6 px conta ao soltar, e arrastar em "L" sem levantar o
   dedo enfileira a próxima direção.
 
+### 3.2.1b Espinhos retráteis (armadilha clássica do original)
+
+Blocos com uma ranhura de onde saem espinhos em ciclos de 2,4 s: recolhidos (1,3 s), aviso com pontinhas e luz vermelha
+piscando (0,3 s), estendidos e mortais (0,7 s), recolhendo (0,1 s). As faixas são sincronizadas por linha, então o
+jogador aprende o ritmo. O gerador só os coloca em células de passagem (nunca onde se pode parar), encostados em parede e
+fora do caminho mais curto; como são atravessáveis quando recolhidos, não alteram o grafo de paradas nem a justiça. O
+congelar pausa o ciclo. Legenda no mapa: `t`.
+
 ### 3.2.2 Mapa de mundo, chefões e o Chefão Mestre
 
-- **Mapa estilo Mario**: cada mundo é um caminho em zigue-zague com um nó por fase; o personagem anda pelo
+- **Mapa estilo Super Mario World**: cenário em pixel art com piso de pedra, caminho de lajes (com correntes nos trechos
+  bloqueados), decorações animadas por mundo (tochas com fogo, caveiras e ossos, cristais, plantas, poças de lava e água,
+  estátuas douradas, olhos no escuro, rachaduras brilhantes), morcegos cruzando o céu e névoa. Cada fase é uma **porta**:
+  trancada com correntes, aberta, ou iluminada quando concluída (com as estrelas embaixo). O chefão é um portal grande com
+  o rosto do chefe e tochas. O personagem **caminha** pelo caminho até a porta escolhida, com poeira nos passos, e o mapa
+  rola para acompanhá-lo.
+- **Prévia** (painel inferior): miniatura, estrelas, recorde, ícones em pixel art dos perigos com contagem, altura, par e
+  dicas (lava sobe; como vencer o chefe).
+- Detalhe de implementação: o personagem anda pelo
   mapa até a fase escolhida (deslize ou toque). Um painel mostra a **prévia** antes de entrar: miniatura do labirinto,
   estrelas, melhor pontuação, perigos (espinhos, morcegos, flechas, lava/água), altura e número mínimo de movimentos.
+- **Chefões com identidade**: cada um tem aparência própria desenhada em código (caveira com chifres, espectro translúcido
+  ondulante, totem de três andares com folhas, magma com rachaduras de fogo, kraken com tentáculos, faraó dourado, rei das
+  sombras com três pares de olhos, coração do núcleo pulsante, e a Máscara Mestre coroada com três olhos).
+- **Entrada cinematográfica**: faixas de cinema, "ALERTA!", o chefe desce do teto, ruge (tremor, flash, vibração), nome e
+  repertório de ataques na tela. Toque para pular.
+- **Ataques telegrafados em fases** (regra de ouro de design de chefes: todo ataque avisa antes): tiro que cai (coluna
+  amarela piscando), chuva de três tiros, raio vertical (coluna vermelha, o chefe para e treme, depois um feixe branco
+  mortal por 0,6 s), espinhos temporários que brotam no labirinto (aviso de 0,9 s, ativos por 3 s), investida (o chefe
+  mergulha pela coluna até a parede e volta), escuridão (5 s com luz só ao redor do jogador e do chefe) e invocação de
+  morcegos. Cada mundo usa um repertório diferente; o Mestre usa todos. Com metade da vida o chefe fica **furioso**:
+  mais rápido, ataques mais frequentes, cor pulsante.
+- **Derrota**: sequência de 3 s com explosões em cadeia, tremor, flash, "DERROTADO!", e então a porta abre e a música do
+  mundo volta.
 - **Chefão no fim de cada mundo** (fase 10): arena aberta com um corredor largo no topo onde o chefe patrulha. A saída
   fica trancada (cadeado) até ele cair. O chefe solta tiros que caem e invoca morcegos. Para feri-lo, pegue o **núcleo
   azul** que aparece no labirinto: ele fica tonto por 6 s (olhos em X, piscando azul); deslize até ele para dar um golpe.

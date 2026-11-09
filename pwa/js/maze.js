@@ -14,7 +14,7 @@
 
   const T = {
     WALL: '#', EMPTY: ' ', DOT: '.', COIN: '*', SPIKE: 'x', SPAWN: 'S', EXIT: 'E',
-    BAT_H: 'b', BAT_V: 'v', SHIELD: 'm', FREEZE: 'f', MAGNET: 'g',
+    BAT_H: 'b', BAT_V: 'v', SHIELD: 'm', FREEZE: 'f', MAGNET: 'g', TRAP: 't',
     SHOOT_D: 'd', SHOOT_U: 'u', SHOOT_L: 'l', SHOOT_R: 'r',
   };
   const SHOOTERS = { d: [0, 1], u: [0, -1], l: [-1, 0], r: [1, 0] };
@@ -160,7 +160,7 @@
   const DEFAULTS = {
     w: 12, h: 16, wallDensity: 0.22, spikes: 0, coins: 3, bats: 0, vbats: 0,
     shooters: 0, shields: 0, freezes: 0, magnets: 0, minMoves: 6, maxMoves: 60,
-    dotSkip: 0, exitX: null, spawnX: null, topOpen: true,
+    dotSkip: 0, exitX: null, spawnX: null, topOpen: true, traps: 0,
   };
 
   function generate(opts, random) {
@@ -238,6 +238,12 @@
       rows = toRows(g);
       res = solve(rows);
       if (!res.solvable || !res.fair) continue;
+
+      // espinhos retráteis: saem de um bloco vizinho em ciclos. Só em células de
+      // PASSAGEM (nunca onde o jogador pode parar), encostadas em parede e fora
+      // do caminho mais curto; são atravessáveis quando recolhidos, então não
+      // alteram o grafo de paradas nem a justiça.
+      placeTraps(g, o.traps, res, R, sx, sy);
 
       // pontos em todas as células atravessáveis
       const passableCells = [];
@@ -344,6 +350,28 @@
     }
   }
 
+  function placeTraps(g, n, res, R, sx, sy, protectedCells) {
+    const cands = [];
+    for (let y = 1; y < g.length - 1; y++) for (let x = 1; x < g[0].length - 1; x++) {
+      const k = key(x, y);
+      if (g[y][x] !== T.EMPTY || !res.passable.has(k) || res.stops.has(k) || res.solutionCells.has(k)) continue;
+      if (protectedCells && protectedCells.has(k)) continue;
+      if (Math.abs(x - sx) + Math.abs(y - sy) <= 2) continue;
+      if (hasSolidNeighbor(g, x, y)) cands.push([x, y]);
+    }
+    shuffle(cands, R);
+    let placed = 0;
+    for (const [x, y] of cands) {
+      if (placed >= n) break;
+      // no máximo uma armadilha por vizinhança imediata
+      let near = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (g[y + dy] && g[y + dy][x + dx] === T.TRAP) near = true;
+      if (near) continue;
+      g[y][x] = T.TRAP; placed++;
+    }
+    return placed;
+  }
+
   function hasSolidNeighbor(g, x, y) {
     return isSolid(g[y][x - 1]) || isSolid(g[y][x + 1]) || isSolid(g[y - 1] && g[y - 1][x]) || isSolid(g[y + 1] && g[y + 1][x]);
   }
@@ -362,7 +390,7 @@
   // baixo: o teto do bloco anterior é o chão. O jogador entra pela
   // abertura em entryX vindo de baixo, deslizando para cima.
   function generateChunk(opts, R) {
-    const o = Object.assign({ w: 12, h: 14, wallDensity: 0.22, spikes: 2, coins: 1, bats: 1, vbats: 0, shooters: 0, minMoves: 3, maxMoves: 40 }, opts);
+    const o = Object.assign({ w: 12, h: 14, wallDensity: 0.22, spikes: 2, coins: 1, bats: 1, vbats: 0, shooters: 0, minMoves: 3, maxMoves: 40, traps: 0 }, opts);
     for (let attempt = 0; attempt < 300; attempt++) {
       // Gera um nível normal com spawn na coluna de entrada; depois remove a
       // última linha (chão) e verifica a partir do ponto onde a subida para.
@@ -407,6 +435,7 @@
         res = r2; placed++;
       }
       rows = withFloor(g); res = solve(rows, start);
+      if (o.traps) placeTraps(g, o.traps, res, R, start[0], start[1], protectedCells);
       const passableCells = [];
       for (let y = 1; y < g.length; y++) for (let x = 1; x < o.w - 1; x++) {
         if (g[y][x] === T.EMPTY && res.passable.has(key(x, y))) { passableCells.push([x, y]); g[y][x] = T.DOT; }
