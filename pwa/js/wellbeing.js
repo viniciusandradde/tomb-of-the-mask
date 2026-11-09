@@ -269,8 +269,10 @@
     this.drawButton('TAMBEM NO MODO CLASSICO: ' + (cfg.enabledClassic ? 'SIM' : 'NAO'), cx, y, w, () => { cfg.enabledClassic = !cfg.enabledClassic; saveCfg(); }, '#8cf5ff', 'pc'); y += step;
     F.text(ctx, 'HOJE: ' + Math.floor(this.wb.playSec / 60) + ' MIN NESTA RODADA, ' + this.wb.cycles + ' DE ' + cfg.cyclesPerDay + ' AVENTURAS   MISSOES: ' + (cfg.medals || 0), cx, y - u * 2, small, '#ffd23f', 'center'); y += step * 0.8;
     if (this.wb.status !== 'idle') { this.drawButton('LIBERAR O JOGO AGORA', cx, y, w, () => this.wbParentUnlock(), '#ffd23f', 'pu'); y += step; }
-    this.drawButton('PAUSAR AGORA (APOS A FASE)', cx, y, w, () => { this.wb.playSec = Math.max(this.wb.playSec, this.wbLimit()); this.wb.warned = true; this.wbSave(); this.buttons = []; this.toastMsg('A MISSAO VEM NO FIM DA FASE'); }, '#ffd23f', 'pp'); y += step;
-    else { this.drawButton('ZERAR O CONTADOR DE HOJE', cx, y, w, () => { this.wb.playSec = 0; this.wb.warned5 = false; this.wb.warned2 = false; this.wbSave(); this.buttons = []; this.toastMsg('ZERADO'); }, '#888899', 'pz'); y += step; }
+    else {
+      this.drawButton('PAUSAR AGORA (APOS A FASE)', cx, y, w, () => { this.wb.playSec = Math.max(this.wb.playSec, this.wbLimit()); this.wb.warned = true; this.wbSave(); this.buttons = []; this.toastMsg('A MISSAO VEM NO FIM DA FASE'); }, '#ffd23f', 'pp'); y += step;
+      this.drawButton('ZERAR O CONTADOR DE HOJE', cx, y, w, () => { this.wb.playSec = 0; this.wb.warned = false; this.wbSave(); this.buttons = []; this.toastMsg('ZERADO'); }, '#888899', 'pz'); y += step;
+    }
     F.text(ctx, 'SBP / OMS / AAP: ATE 1 HORA DE TELA POR DIA DE 2 A 5 ANOS,', cx, this.H - u * 38, small, '#888899', 'center');
     F.text(ctx, 'COM ADULTO POR PERTO; NADA NA HORA DE DORMIR.', cx, this.H - u * 30, small, '#888899', 'center');
     F.text(ctx, 'O JOGO AVISA; QUEM CONDUZ A TRANSICAO E VOCE.', cx, this.H - u * 22, small, '#888899', 'center');
