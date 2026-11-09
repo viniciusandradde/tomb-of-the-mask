@@ -56,7 +56,11 @@
     data: null,
     load() {
       try { this.data = JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (e) { this.data = null; }
-      this.data = Object.assign({ unlocked: 1, stars: {}, best: {}, coins: 0, masks: ['classica'], mask: 'classica', arcadeBest: 0, sfx: true, music: true, crt: true, shake: true, kids: true, voice: true, hints: false }, this.data || {});
+      this.data = Object.assign({ unlocked: 1, stars: {}, best: {}, coins: 0, masks: ['classica'], mask: 'classica', arcadeBest: 0, sfx: true, music: true, crt: true, shake: true, kids: true, voice: true, hints: false, inv: { shield: 1, skip: 0 }, up: { magnet: 0, freeze: 0, addict: 0, boost: 0 }, chests: {} }, this.data || {});
+      // migração: campos novos em saves antigos
+      this.data.inv = Object.assign({ shield: 1, skip: 0 }, this.data.inv || {});
+      this.data.up = Object.assign({ magnet: 0, freeze: 0, addict: 0, boost: 0 }, this.data.up || {});
+      this.data.chests = this.data.chests || {};
       return this.data;
     },
     write() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); } catch (e) { /* armazenamento indisponível */ } },
@@ -157,7 +161,11 @@
         const dx = e.clientX - sx, dy = e.clientY - sy;
         const inGame = this.state === 'play' || this.state === 'dead';
         if (!moved && inGame && Math.hypot(dx, dy) >= FLICK && now() - st < 0.3) { moved = true; swipe(dx, dy); }
-        if (!moved) this.tap(e.clientX, e.clientY);
+        if (!moved) {
+          const nowT = now();
+          if (this.state === 'play' && this.lastTapAt && nowT - this.lastTapAt < 0.32) { this.lastTapAt = 0; this.useShield(); }
+          else { this.lastTapAt = nowT; this.tap(e.clientX, e.clientY); }
+        }
         lastDir = null;
       };
       c.addEventListener('pointerup', up);
@@ -170,6 +178,7 @@
         else if (k === 'Escape' || k === 'p' || k === 'P') this.togglePause();
         else if (k === 'Enter' || k === ' ') { e.preventDefault(); this.confirm(); }
         else if (k === 'r' || k === 'R') { if (this.state === 'play' || this.state === 'dead') this.restart(); }
+        else if (k === 'e' || k === 'E' || k === 'Shift') { if (this.state === 'play') this.useShield(); }
       });
       // iOS: 'touchend' e 'click' são os gestos que liberam o áudio
       c.addEventListener('touchend', () => this.audio.unlock(), { passive: true });
@@ -322,8 +331,9 @@
       };
       this.pops = []; this.hitStop = 0; this.camLead = 0;
       const mask = this.mask();
-      if (mask.perkId === 'shield') this.player.shield = 1;
-      if (mask.perkId === 'magnet') this.player.magnet = Infinity;
+      if (mask.startShield) this.player.shield = 1;
+      if (mask.permaMagnet) this.player.magnet = Infinity;
+      this.player.addict = 0; this.player.boost = 0;
       this.score = 0; this.levelCoins = 0; this.dotsLeft = 0; this.timeStart = now(); this.elapsed = 0; this.moves = 0;
       this.bats = []; this.shots = []; this.shooters = []; this.particles = []; this.traps = []; this.trapClock = 0;
       this.spawnEntities(this.grid.minY, this.grid.maxY);
@@ -627,6 +637,8 @@
       p.invul = Math.max(0, p.invul - dt);
       if (p.freeze > 0) p.freeze -= dt;
       if (p.magnet > 0 && p.magnet !== Infinity) p.magnet -= dt;
+      if (p.addict > 0) p.addict -= dt;
+      if (p.boost > 0) p.boost -= dt;
 
       // movimento do jogador em sub-passos para não pular células
       if (p.moving) {
@@ -663,7 +675,7 @@
 
       // morcegos
       const frozen = p.freeze > 0;
-      const batSpeed = BAT_SPEED * (this.mask().perkId === 'slowbats' ? 0.65 : 1);
+      const batSpeed = BAT_SPEED * (this.mask().slowBats ? 0.65 : 1);
       for (const b of this.bats) {
         b.phase += dt * 10;
         if (frozen) continue;
@@ -671,7 +683,7 @@
         const ahead = this.grid.get(Math.floor(nx + b.dx * 0.45), Math.floor(ny + b.dy * 0.45));
         if (M.isSolid(ahead) || ahead === T.SPIKE) { b.dx = -b.dx; b.dy = -b.dy; }
         else { b.x = nx; b.y = ny; }
-        if (!p.dead && this.started && Math.abs(b.x - p.x) < 0.7 && Math.abs(b.y - p.y) < 0.7) this.hit('morcego', b);
+        if (!p.dead && this.started && !this.immune('bat') && Math.abs(b.x - p.x) < 0.7 && Math.abs(b.y - p.y) < 0.7) this.hit('morcego', b);
       }
       // atiradores
       for (const s of this.shooters) {
@@ -689,14 +701,14 @@
         sh.x += sh.dx * SHOT_SPEED * dt; sh.y += sh.dy * SHOT_SPEED * dt; sh.life -= dt;
         const c = this.grid.get(Math.floor(sh.x), Math.floor(sh.y));
         if (M.isSolid(c)) { sh.life = 0; this.burst(sh.x, sh.y, 4, '#ffffff', 1); }
-        if (!p.dead && this.started && Math.abs(sh.x - p.x) < 0.55 && Math.abs(sh.y - p.y) < 0.55) { sh.life = 0; this.hit('flecha'); }
+        if (!p.dead && this.started && Math.abs(sh.x - p.x) < 0.55 && Math.abs(sh.y - p.y) < 0.55) { sh.life = 0; if (!this.immune('arrow')) this.hit('flecha'); }
       }
       this.shots = this.shots.filter((s) => s.life > 0);
 
       // espinhos retráteis: ciclo recolhido -> aviso -> estendido (mortal) -> recolhe
       if (p.freeze <= 0) this.trapClock += dt;
       for (const tr of this.traps) {
-        if (!p.dead && p.invul <= 0 && p.cx === tr.x && p.cy === tr.y && this.trapState(tr).deadly) { this.die('espinho'); return; }
+        if (!p.dead && p.invul <= 0 && !this.immune('trap') && p.cx === tr.x && p.cy === tr.y && this.trapState(tr).deadly) { this.die('espinho'); return; }
       }
 
       if (this.boss) this.updateBoss(dt);
@@ -766,29 +778,33 @@
     enterCell(x, y) {
       const c = this.grid.get(x, y);
       if (c === T.SPIKE) { this.die('espinho'); return; }
-      if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); if (tr && this.trapState(tr).deadly && this.player.invul <= 0) { this.die('espinho'); return; } }
+      if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); if (tr && this.trapState(tr).deadly && this.player.invul <= 0 && !this.immune('trap')) { this.die('espinho'); return; } }
       if (this.bossHazardAt && this.bossHazardAt(x, y)) { this.die('chefao'); return; }
       if (c === T.EXIT) { if (this.mode === 'stage') this.winLevel(); return; }
-      if (c === T.DOT || c === T.COIN || c === T.SHIELD || c === T.FREEZE || c === T.MAGNET) this.collect(x, y, c);
+      if (c === T.DOT || c === T.COIN || c === T.SHIELD || c === T.FREEZE || c === T.MAGNET || c === T.ADDICT || c === T.BOOST) this.collect(x, y, c);
     }
     collect(x, y, c) {
       const p = this.player;
       this.grid.set(x, y, T.EMPTY);
+      const mult = p.boost > 0 ? this.boostMult() : 1;
       if (c === T.DOT) {
-        this.score += 10; this.dotsLeft--; this.audio.dot();
+        this.score += 10 * mult; this.dotsLeft--; this.audio.dot();
+        if (p.addict > 0) { this.save.coins += 1; this.sessionCoins = (this.sessionCoins || 0) + 1; }
         this.pops.push({ x: x + 0.5, y: y + 0.5, life: 0.16, color: this.worldAtRow(y).accent });
         this.burst(x + 0.5, y + 0.5, 3, this.worldAtRow(y).accent, 1.2);
         this.combo = (this.t - (this.lastDotAt || -9) < 0.35) ? (this.combo || 0) + 1 : 1; this.lastDotAt = this.t;
         if (this.kids() && this.combo > 0 && this.combo % 8 === 0) this.toastMsg(this.pick(COMBOS));
       }
       else if (c === T.COIN) {
-        const v = this.mask().perkId === 'coins2x' ? 2 : 1;
-        this.levelCoins++; this.score += 100; this.save.coins += 5 * v; this.audio.coin();
+        const v = Math.round(5 * this.bonus('coin'));
+        this.levelCoins++; this.score += 100 * mult; this.save.coins += v; this.audio.coin();
         this.burst(x + 0.5, y + 0.5, 12, '#ffd23f', 2.5);
-        this.toastMsg('+' + 5 * v + ' $');
+        this.toastMsg('+' + v + ' $');
       } else if (c === T.SHIELD) { p.shield = 1; this.audio.powerup(); this.toastMsg('ESCUDO!'); this.burst(x + 0.5, y + 0.5, 10, '#8cf5ff', 2); }
-      else if (c === T.FREEZE) { p.freeze = 6; this.audio.powerup(); this.toastMsg('CONGELAR!'); this.burst(x + 0.5, y + 0.5, 10, '#ffffff', 2); }
-      else if (c === T.MAGNET) { p.magnet = 10; this.audio.powerup(); this.toastMsg('IMA!'); this.burst(x + 0.5, y + 0.5, 10, '#ff4fa3', 2); }
+      else if (c === T.FREEZE) { p.freeze = this.duration('freeze'); this.audio.powerup(); this.toastMsg('CONGELAR!'); this.burst(x + 0.5, y + 0.5, 10, '#ffffff', 2); }
+      else if (c === T.ADDICT) { p.addict = this.duration('addict'); this.audio.powerup(); this.toastMsg('VICIADO EM MOEDAS!'); this.burst(x + 0.5, y + 0.5, 12, '#ffd23f', 2); }
+      else if (c === T.BOOST) { p.boost = this.duration('boost'); this.audio.powerup(); this.toastMsg('PONTOS X' + this.boostMult() + '!'); this.burst(x + 0.5, y + 0.5, 12, '#ff4fa3', 2); }
+      else if (c === T.MAGNET) { p.magnet = this.duration('magnet'); this.audio.powerup(); this.toastMsg('IMA!'); this.burst(x + 0.5, y + 0.5, 10, '#ff4fa3', 2); }
     }
     hit(cause, bat) {
       const p = this.player;
@@ -838,6 +854,7 @@
       this.save.best[idx] = Math.max(this.save.best[idx] || 0, this.finalScore);
       const wasUnlocked = this.save.unlocked;
       this.save.unlocked = Math.max(this.save.unlocked, idx + 2);
+      this.chest = this.rollChest ? this.rollChest(idx, stars) : null;
       this.newWorld = wasUnlocked !== this.save.unlocked && (idx + 1) % 10 === 0 && idx + 1 < root.LEVELS.length;
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
@@ -977,7 +994,7 @@
       for (let y = y0; y <= y1; y++) for (let x = 0; x < COLS; x++) {
         const c = this.grid.get(x, y);
         const px = ox + x * s, py = oy + y * s;
-        if (c === T.DOT) { const d = Math.max(2, Math.round(s * 0.14)); ctx.fillStyle = this.worldAtRow(y).accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
+        if (c === T.DOT) { const addict = this.player.addict > 0; const d = Math.max(2, Math.round(s * (addict ? 0.22 : 0.14))); ctx.fillStyle = addict ? '#ffd23f' : this.worldAtRow(y).accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
         else if (c === T.COIN) this.drawCoin(px, py, pulse);
         else if (c === T.SPIKE) this.drawSpike(px, py, x, y, 1, false);
         else if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); const st = tr ? this.trapState(tr) : { ext: 0 }; this.drawSpike(px, py, x, y, st.ext, st.warn, true); }
@@ -985,6 +1002,8 @@
         else if (c === T.SHIELD) this.drawPowerup(px, py, '#8cf5ff', 'S', pulse);
         else if (c === T.FREEZE) this.drawPowerup(px, py, '#ffffff', '*', pulse);
         else if (c === T.MAGNET) this.drawPowerup(px, py, '#ff4fa3', 'U', pulse);
+        else if (c === T.ADDICT) this.drawPowerup(px, py, '#ffd23f', '$', pulse);
+        else if (c === T.BOOST) this.drawPowerup(px, py, '#ff7a3d', 'X', pulse);
       }
       // tiros
       for (const sh of this.shots) {
@@ -1333,7 +1352,7 @@
         F.text(ctx, this.toast.msg, this.W / 2, this.H * 0.3 - (1.2 - this.toast.t) * 30, u, '#ffd23f', 'center', { shadow: '#000' });
         ctx.globalAlpha = 1;
       }
-      if (this.player.freeze > 0) F.text(ctx, 'CONGELADO ' + Math.ceil(this.player.freeze), this.W / 2, this.H - u * 9 - pad, Math.max(1, u - 1), '#9ad8ff', 'center');
+      if (this.drawItemsHud) this.drawItemsHud();
     }
 
     // ------------------------------------------------------------ overlays
@@ -1395,6 +1414,7 @@
       const t = this.elapsed; const txt = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
       F.text(this.ctx, 'TEMPO ' + txt + '  MOV ' + this.moves + '/' + this.level.par, cx, cy + u * 14, Math.max(1, u - 1), '#aaaaaa', 'center');
       if (this.newWorld) F.text(this.ctx, 'NOVO MUNDO DESBLOQUEADO!', cx, cy + u * 24, Math.max(1, u - 1), '#8cf5ff', 'center');
+      if (this.chest && this.drawChest) this.drawChest(cx, cy + u * 24 + (this.newWorld ? u * 8 : 0));
       const w = Math.min(this.W * 0.8, 320);
       const last = this.levelIndex + 1 >= root.LEVELS.length;
       this.drawButton(last ? 'FIM! VOLTAR' : 'PROXIMA ▶', cx, cy + u * 38, w, () => this.nextLevel(), null, 'w1');
@@ -1435,7 +1455,7 @@
       const by = this.H * 0.56;
       this.drawButton('▶ AVENTURA', cx, by, w, () => this.goto('worlds'), '#c065d8', 't1');
       this.drawButton('ARCADE', cx, by + u * 16, w, () => { this.startArcade(); }, '#ff3b3b', 't2');
-      this.drawButton('MASCARAS  $' + this.save.coins, cx, by + u * 32, w, () => this.goto('shop'), '#ffd23f', 't3');
+      this.drawButton('LOJA  $' + this.save.coins, cx, by + u * 32, w, () => this.goto('shop'), '#ffd23f', 't3');
       this.drawButton('⚙ OPCOES', cx, by + u * 48, w, () => this.goto('settings'), '#8cf5ff', 't4');
       this.drawButton(this.kids() ? '\u2665 MODO: LUDICO' : 'MODO: CLASSICO', cx, by + u * 64, w, () => { this.save.kids = !this.save.kids; Save.write(); this.buttons = []; if (this.save.kids) this.speak('Modo lúdico ligado!'); }, this.kids() ? '#ff4fa3' : '#888899', 't5');
       if (!this.audio.ready() && Math.floor(this.t * 2) % 2 === 0) F.text(ctx, '\u266A TOQUE PARA ATIVAR O SOM', cx, this.H - u * 27 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
@@ -1652,32 +1672,6 @@
       F.text(ctx, 'ALTURA ' + (L.rows.length - 2) + '  PAR ' + L.par + ' MOV', tx, y, small, '#888899', 'left'); y += lineH;
       if (L.boss) F.text(ctx, 'PEGUE O NUCLEO AZUL E BATA NELE', tx, y, small, '#8cf5ff', 'left');
       this.drawButton(L.boss ? 'ENFRENTAR ▶' : 'JOGAR ▶', px + pw - u * 12 - 24, py + ph - (u * 7 + 20) / 2 - 8, u * 24 + 24, () => this.mapEnter(), wd.color, 'play');
-    }
-    renderShop() {
-      const ctx = this.ctx, u = this.ui, cx = this.W / 2;
-      this.renderBackdrop('#ffd23f');
-      F.text(ctx, 'MASCARAS', cx, 16, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#7a3a00' });
-      F.text(ctx, 'VOCE TEM $' + this.save.coins, cx, 16 + u * 12, u, '#ffd23f', 'center');
-      const w = Math.min(this.W * 0.9, 380), h = Math.min(u * 7 + 40, (this.H - 16 - u * 26 - u * 7 - 60) / MASKS.length - 8);
-      const top = 16 + u * 26;
-      MASKS.forEach((m, i) => {
-        const owned = this.save.masks.includes(m.id), equipped = this.save.mask === m.id;
-        const y = top + i * (h + 8), x = cx - w / 2;
-        ctx.fillStyle = rgba(m.color, equipped ? 0.3 : 0.1); ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = equipped ? '#ffffff' : m.color; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-        // miniatura
-        const saveMask = this.save.mask; this.save.mask = m.id; this.drawBigMask(x + 10 + h * 0.3, y + h / 2, h * 0.5); this.save.mask = saveMask;
-        F.text(ctx, m.name, x + h * 0.6 + 20, y + 8, u, '#ffffff', 'left');
-        F.text(ctx, m.perk, x + h * 0.6 + 20, y + 8 + u * 8, Math.max(1, u - 1), '#aaaaaa', 'left');
-        const tag = equipped ? 'EM USO' : owned ? 'USAR' : '$' + m.cost;
-        F.text(ctx, tag, x + w - 10, y + h / 2 - u * 3.5, u, equipped ? '#8cf5ff' : owned ? '#ffffff' : (this.save.coins >= m.cost ? '#ffd23f' : '#ff3b3b'), 'right');
-        if (!this.buttons.find((b) => b.id === 'm' + i)) this.buttons.push({ id: 'm' + i, x, y, w, h, fn: () => {
-          if (owned) { this.save.mask = m.id; Save.write(); this.buttons = []; return; }
-          if (this.save.coins >= m.cost) { this.save.coins -= m.cost; this.save.masks.push(m.id); this.save.mask = m.id; Save.write(); this.audio.buy(); this.buttons = []; }
-          else this.audio.bump();
-        } });
-      });
-      this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => this.goto('title'), '#888899', 'back');
     }
     renderSettings() {
       const ctx = this.ctx, u = this.ui, cx = this.W / 2;

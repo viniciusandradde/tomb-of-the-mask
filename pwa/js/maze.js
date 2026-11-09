@@ -14,7 +14,7 @@
 
   const T = {
     WALL: '#', EMPTY: ' ', DOT: '.', COIN: '*', SPIKE: 'x', SPAWN: 'S', EXIT: 'E',
-    BAT_H: 'b', BAT_V: 'v', SHIELD: 'm', FREEZE: 'f', MAGNET: 'g', TRAP: 't',
+    BAT_H: 'b', BAT_V: 'v', SHIELD: 'm', FREEZE: 'f', MAGNET: 'g', ADDICT: 'c', BOOST: 's', TRAP: 't',
     SHOOT_D: 'd', SHOOT_U: 'u', SHOOT_L: 'l', SHOOT_R: 'r',
   };
   const SHOOTERS = { d: [0, 1], u: [0, -1], l: [-1, 0], r: [1, 0] };
@@ -145,7 +145,7 @@
     for (let y = 0; y < rows.length; y++) {
       for (let x = 0; x < rows[y].length; x++) {
         const c = rows[y][x];
-        if ((c === T.DOT || c === T.COIN || c === T.SHIELD || c === T.FREEZE || c === T.MAGNET) && !res.passable.has(key(x, y))) {
+        if ((c === T.DOT || c === T.COIN || c === T.SHIELD || c === T.FREEZE || c === T.MAGNET || c === T.ADDICT || c === T.BOOST) && !res.passable.has(key(x, y))) {
           unreachable.push([x, y, c]);
         }
       }
@@ -160,7 +160,7 @@
   const DEFAULTS = {
     w: 12, h: 16, wallDensity: 0.22, spikes: 0, coins: 3, bats: 0, vbats: 0,
     shooters: 0, shields: 0, freezes: 0, magnets: 0, minMoves: 6, maxMoves: 60,
-    dotSkip: 0, exitX: null, spawnX: null, topOpen: true, traps: 0,
+    dotSkip: 0, exitX: null, spawnX: null, topOpen: true, traps: 0, addicts: 0, boosts: 0,
   };
 
   function generate(opts, random) {
@@ -272,6 +272,8 @@
       for (let i = 0; i < o.shields && puCands.length; i++) { const [x, y] = puCands.pop(); g[y][x] = T.SHIELD; }
       for (let i = 0; i < o.freezes && puCands.length; i++) { const [x, y] = puCands.pop(); g[y][x] = T.FREEZE; }
       for (let i = 0; i < o.magnets && puCands.length; i++) { const [x, y] = puCands.pop(); g[y][x] = T.MAGNET; }
+      for (let i = 0; i < o.addicts && puCands.length; i++) { const [x, y] = puCands.pop(); g[y][x] = T.ADDICT; }
+      for (let i = 0; i < o.boosts && puCands.length; i++) { const [x, y] = puCands.pop(); g[y][x] = T.BOOST; }
 
       // morcegos horizontais: corredores livres com 4+ células
       // preencher ANTES dos morcegos: a faixa deve ser medida na geometria final
@@ -444,6 +446,7 @@
       shuffle(coinCands, R);
       for (let i = 0; i < o.coins && coinCands.length; i++) { const [x, y] = coinCands.pop(); g[y][x] = T.COIN; }
       if (o.shields && coinCands.length && R.chance(o.shields)) { const [x, y] = coinCands.pop(); g[y][x] = T.SHIELD; }
+      if (o.pickups && coinCands.length && R.chance(o.pickups)) { const [x, y] = coinCands.pop(); g[y][x] = R.pick([T.MAGNET, T.FREEZE, T.ADDICT, T.BOOST]); }
       // justiça: faixa de morcego não cobre a coluna de entrada nem paradas obrigatórias
       const forbidden = new Set([...protectedCells, ...mandatoryStops(rows, start)]);
       for (const k of protectedCells) res.touched.add(k);

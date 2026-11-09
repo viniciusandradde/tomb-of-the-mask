@@ -308,6 +308,9 @@
     if (L.boss) { F.text(ctx, 'NUCLEO AZUL = CHEFE TONTO', tx, y, small, '#8cf5ff', 'left'); y += lineH * 0.7; F.text(ctx, 'ENTAO BATA NELE!', tx, y, small, '#8cf5ff', 'left'); }
     else if (L.fluid) F.text(ctx, L.fluid.type === 'lava' ? 'A LAVA SOBE: NAO PARE!' : 'A AGUA SOBE: NAO PARE!', tx, y, small, '#ff6a1a', 'left');
     const ready = Math.abs(this.tokenProg - this.sel) <= 0.2;
+    // Pula-fase: só em fases ainda não concluídas (nunca chefes)
+    const skips = (this.save.inv && this.save.inv.skip) || 0;
+    if (!L.boss && this.save.unlocked <= idx + 1) this.drawButton('PULAR X' + skips, tx + u * 10 + 12, py + ph - (u * 7 + 20) / 2 - 8, u * 20 + 24, () => this.skipLevel(idx), skips > 0 ? '#7fc33a' : '#555566', 'skip');
     const bw = u * 22 + 24;
     this.drawButton(L.boss ? 'ENFRENTAR ▶' : 'JOGAR ▶', px + pw - bw / 2 - 10, py + ph - (u * 7 + 20) / 2 - 8, bw, () => this.mapEnter(), ready ? wd.color : '#555566', 'play');
   };

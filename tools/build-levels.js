@@ -9,12 +9,12 @@ const BOSSES = [
   { name: 'ESPECTRO DA CRIPTA', hp: 3, speed: 2.5, shot: 2.4, bats: 6.5, size: 3 },
   { name: 'TOTEM DA SELVA', hp: 4, speed: 2.6, shot: 2.3, bats: 6, size: 3 },
   { name: 'SENHOR DO MAGMA', hp: 4, speed: 2.8, shot: 2.1, bats: 6, size: 3 },
-  { name: 'KRAKEN DO ABISMO', hp: 4, speed: 3.0, shot: 2.0, bats: 5.5, size: 3 },
+  { name: 'KRAKEN DO ABISMO', hp: 5, speed: 3.0, shot: 2.0, bats: 5.5, size: 3 },
   { name: 'FARAO DOURADO', hp: 5, speed: 3.1, shot: 1.9, bats: 5.5, size: 3 },
-  { name: 'REI DAS SOMBRAS', hp: 5, speed: 3.3, shot: 1.8, bats: 5, size: 3 },
-  { name: 'CORACAO DO NUCLEO', hp: 5, speed: 3.5, shot: 1.7, bats: 5, size: 3 },
+  { name: 'REI DAS SOMBRAS', hp: 6, speed: 3.5, shot: 1.6, bats: 5, size: 3 },
+  { name: 'CORACAO DO NUCLEO', hp: 7, speed: 3.8, shot: 1.4, bats: 5, size: 3 },
 ];
-const MASTER = { name: 'MASCARA MESTRE', hp: 8, speed: 3.8, shot: 1.5, bats: 4, size: 3, master: true };
+const MASTER = { name: 'MASCARA MESTRE', hp: 10, speed: 4.2, shot: 1.2, bats: 4, size: 3, master: true };
 
 const WORLDS = [
   { id: 'catacumba', name: 'CATACUMBA', color: '#c065d8', dark: '#4a1f58', accent: '#f0a8ff', music: 0 },
@@ -32,19 +32,21 @@ const WORLDS = [
 function params(w, i) {
   const t = i / 9; // 0..1 dentro do mundo
   const base = {
-    h: Math.round(16 + w * 2 + t * 10),
-    wallDensity: 0.2 + w * 0.012 + t * 0.03,
-    spikes: Math.round(w * 1.2 + t * 3 + (w > 0 ? 1 : 0)),
+    h: Math.round(16 + w * 2.5 + t * 10),
+    wallDensity: 0.2 + w * 0.015 + t * 0.04,
+    spikes: Math.round(w * 1.6 + t * 4 + (w > 0 ? 1 : 0)),
     coins: 3,
-    bats: w >= 1 ? Math.min(4, Math.round(0.5 + w * 0.4 + t * 1.5)) : (i >= 6 ? 1 : 0),
-    vbats: w >= 2 ? Math.round(w * 0.3 + t) : 0,
-    shooters: w >= 2 ? Math.min(4, Math.round((w - 1) * 0.5 + t * 2)) : 0,
+    bats: w >= 1 ? Math.min(6, Math.round(0.5 + w * 0.6 + t * 2)) : (i >= 6 ? 1 : 0),
+    vbats: w >= 2 ? Math.round(w * 0.5 + t * 1.5) : 0,
+    shooters: w >= 2 ? Math.min(6, Math.round((w - 1) * 0.8 + t * 2.5)) : 0,
+    traps: w >= 1 ? Math.min(7, Math.round(0.5 + w * 0.8 + t * 2.5)) : (i >= 5 ? 1 : 0),
     shields: (i % 3 === 2 && w >= 1) ? 1 : 0,
     freezes: (w >= 3 && i % 4 === 1) ? 1 : 0,
     magnets: (w >= 2 && i % 5 === 3) ? 1 : 0,
-    traps: w >= 1 ? Math.min(5, Math.round(0.5 + w * 0.5 + t * 2)) : (i >= 5 ? 1 : 0),
-    minMoves: 8 + w + Math.round(t * 6),
-    maxMoves: 70,
+    addicts: (w >= 1 && i % 4 === 0) ? 1 : 0,
+    boosts: (w >= 2 && i % 4 === 2) ? 1 : 0,
+    minMoves: Math.round(8 + w * 1.5 + t * 8),
+    maxMoves: 80,
     dotSkip: 0,
   };
   return base;
@@ -55,8 +57,8 @@ function fluidFor(w, i) {
   if (!world.fluid) return null;
   if (w === 3 && i < 2) return null; // primeiras fases do vulcão sem lava
   // velocidade em células por segundo; atraso em segundos antes de começar a subir
-  const speed = +(0.9 + w * 0.12 + (i / 9) * 0.6).toFixed(2);
-  return { type: world.fluid, speed, delay: 2.5 };
+  const speed = +(0.9 + w * 0.18 + (i / 9) * 0.7).toFixed(2);
+  return { type: world.fluid, speed, delay: +Math.max(1.5, 2.5 - w * 0.12).toFixed(2) };
 }
 
 const levels = [];
@@ -81,7 +83,11 @@ for (let w = 0; w < WORLDS.length; w++) {
       // Fase 1 é um tutorial: sem perigos, poucas paredes.
       const p = n === 1 ? { h: 14, wallDensity: 0.2, spikes: 0, bats: 0, coins: 3, minMoves: 5, maxMoves: 14 } : params(w, i);
       let result = null, seed = seedBase + n * 7919;
-      for (let k = 0; k < 20 && !result; k++, seed += 13) result = Maze.generate(Object.assign({ seed }, p), Maze.rng(seed));
+      for (let round = 0; round < 6 && !result; round++) {
+        const q = Object.assign({}, p);
+        if (round > 0) for (const k of ['spikes', 'traps', 'bats', 'vbats', 'shooters']) q[k] = Math.round(p[k] * (1 - round * 0.12));
+        for (let k = 0; k < 20 && !result; k++, seed += 13) result = Maze.generate(Object.assign({ seed }, q), Maze.rng(seed));
+      }
       if (!result) throw new Error('Não consegui gerar a fase ' + n);
       rows = result.rows; moves = result.moves;
     }
