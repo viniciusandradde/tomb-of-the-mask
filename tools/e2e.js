@@ -149,6 +149,55 @@ const { spawn } = require('child_process');
   await page.evaluate(() => { game.shopTab = 'powers'; game.buttons = []; }); await page.waitForTimeout(200);
   await page.screenshot({ path: path.join(out, '8b-loja-poderes.png') });
 
+  // Missão de Brincar (pausa saudável): fluxo completo com tempo simulado
+  const wb = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    game.save.kids = true; game.save.wbCfg.enabled = true; game.save.wbCfg.limitMin = 15; game.save.wbCfg.breakMin = 15;
+    game.startLevel(0); game.started = true;
+    game.wb.cycles = 0; game.save.wbCfg.cyclesPerDay = 2; game.wb.status = 'idle'; game.wb.warned = false;
+    game.wb.playSec = 15 * 60 - 170; game.wbTick(0.1); const warnedMid = game.wb.warned; // não avisa no meio da fase
+    game.wbMaybeWarn(); const warned = game.wb.warned && !warnedMid; // avisa no fim da fase
+    game.wb.playSec = 15 * 60 + 1; game.state = 'win'; game.winAt = game.t; game.levelCoins = 0;
+    game.nextLevel(); await wait(100);
+    const mission = { state: game.state, status: game.wb.status, missao: (WB_CONTENT.missions[game.wb.missionIdx] || {}).title };
+    game.wbAccept(); await wait(100);
+    const breakState = { state: game.state, status: game.wb.status, done: game.wbBreakDone() };
+    game.wbInsist(); game.wbInsist(); const insist = game.wb.insistN; // 2a chamada em menos de 20 s: silenciosa
+    game.wb.lastInsistAt = 0; game.wbInsist(); game.wb.lastInsistAt = 0; game.wbInsist(); game.wb.lastInsistAt = 0; game.wbInsist(); game.wb.lastInsistAt = 0; game.wbInsist(); const insistMax = game.wb.insistN;
+    // tenta entrar numa fase durante a pausa (não pode)
+    game.startLevel(1); const stillBreak = game.state;
+    // reabrir o app durante a pausa mantém a pausa
+    game.state = 'title'; game.wbLoad(); const reload = game.state;
+    // simula 15 minutos passados
+    game.wb.missionStart = Date.now() - 16 * 60000; const done = game.wbBreakDone();
+    game.wbReturn(); await wait(100); const hifive = game.state;
+    game.wbHiFive(); await wait(100);
+    const after = { medals: game.save.wbCfg.medals, playSec: game.wb.playSec, status: game.wb.status, hit: game.wbHit };
+    await wait(2800);
+    const resumed = game.state;
+    // portão parental
+    game.wbOpenGate(() => { game.state = 'parent'; game.buttons = []; });
+    const q = game.gate.a * game.gate.b; game.gate.answer = String(q);
+    const okBtn = { fn: null }; game.renderGate(); const b = game.buttons.find((x) => x.id === 'k11'); b.fn();
+    const parent = game.state;
+    // segundo ciclo do dia termina em "até amanhã"
+    game.wb.cycles = 1; game.wb.status = 'break'; game.wb.missionStart = Date.now() - 16 * 60000; game.wbReturn(); await wait(50); game.wbHiFive(); await wait(2800); const night = { state: game.state, status: game.wb.status };
+    game.wb.status = 'idle'; game.wb.cycles = 0;
+    return { warned, mission, breakState, insist, insistMax, stillBreak, reload, done, hifive, after, resumed, parent, night };
+  });
+  console.log('missão de brincar:', JSON.stringify(wb));
+  await page.evaluate(() => { game.wb.status = 'mission'; game.wb.missionIdx = 0; game.state = 'mission'; game.buttons = []; }); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(out, '9a-missao.png') });
+  await page.evaluate(() => { game.wb.status = 'break'; game.wb.missionStart = Date.now() - 6 * 60000; game.state = 'break'; game.buttons = []; }); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(out, '9b-pausa.png') });
+  await page.evaluate(() => { game.state = 'hifive'; game.wbHit = false; game.buttons = []; }); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(out, '9c-hifive.png') });
+  await page.evaluate(() => { game.state = 'parent'; game.buttons = []; }); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(out, '9d-pais.png') });
+  await page.evaluate(() => { game.state = 'goodnight'; game.buttons = []; }); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(out, '9e-boanoite.png') });
+  await page.evaluate(() => { game.wb.status = 'idle'; game.wb.playSec = 0; game.wb.cycles = 0; game.wbSave(); game.goto('title'); });
+
   // modo lúdico: morrer em um espinho mostra "OPA!" e a fase reinicia igual
   const ludico = await page.evaluate(async () => {
     game.save.kids = true; game.startLevel(12);
@@ -201,6 +250,7 @@ const { spawn } = require('child_process');
   if (result.state !== 'win') { console.log('FALHA: fase 1 não foi vencida'); process.exit(1); }
   if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play' || chefe.introState !== 'bossintro' || chefe.deathState !== 'bossdeath') { console.log('FALHA: chefão'); process.exit(1); }
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
+  if (!wb.warned || wb.mission.state !== 'mission' || wb.breakState.state !== 'break' || wb.insist !== 1 || wb.insistMax !== 4 || wb.night.state !== 'goodnight' || wb.stillBreak !== 'break' || wb.reload !== 'break' || !wb.done || wb.hifive !== 'hifive' || wb.after.medals < 1 || wb.after.playSec !== 0 || wb.resumed !== 'levels' || wb.parent !== 'parent') { console.log('FALHA: missão de brincar'); process.exit(1); }
   if (itens.afterUse.inv !== 1 || itens.afterUse.shield !== 1 || itens.gain.coins !== 1 || itens.gain.score !== 30 || !itens.imune || itens.dur.coelho <= itens.dur.freeze0) { console.log('FALHA: itens'); process.exit(1); }
   if (morte.state !== 'dead' || morte.cause !== 'chefao') { console.log('FALHA: contato com chefe deveria matar'); process.exit(1); }
   console.log('e2e ok; capturas em', out);
