@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## 1.7.2 — Flechas e elementos presos
+- 120 dos 209 atiradores apontavam para uma parede (raio zero) e 40 tinham raio curto: o preenchimento das células inalcançáveis tapava a linha de tiro. Agora o preenchimento acontece antes, o raio é medido na geometria final e o validador exige raio mínimo de 3.
+- Aviso visual de 0,5 s antes de cada tiro; a flecha anda em sub-passos e não "pula" o jogador nem a parede; some na porta trancada do chefe.
+- Espinhos sem nenhuma célula de aproximação (presos no nada) viram parede; validador reprova a ocorrência.
+
 ## 1.7.1 — Correção dos chefões
 - Após um golpe, o recuo levava o jogador para dentro da parede do chão do corredor; agora ele volta pela passagem mais próxima e desliza para o labirinto, longe do chefe.
 - Arenas regeneradas com buracos garantidos nas duas pontas do corredor e novo validador: com a porta trancada, de toda parada dá para chegar ao chefe e voltar ao labirinto (as fases 10 e 50 estavam presas).

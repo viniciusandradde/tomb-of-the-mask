@@ -693,18 +693,25 @@
         if (frozen) continue;
         if (Math.abs(s.y - p.y) > this.viewRows() + 4) continue; // só atira perto da tela
         s.timer -= dt;
+        s.warn = s.timer < 0.5 ? 0.5 - s.timer : 0; // brilho de aviso antes do tiro
         if (s.timer <= 0) {
-          s.timer = SHOT_PERIOD;
+          s.timer = SHOT_PERIOD; s.warn = 0;
           this.shots.push({ x: s.x + 0.5 + s.dx * 0.6, y: s.y + 0.5 + s.dy * 0.6, dx: s.dx, dy: s.dy, life: 6 });
           if (Math.abs(s.y - p.y) < this.viewRows()) this.audio.shoot();
         }
       }
       for (const sh of this.shots) {
         if (frozen) continue;
-        sh.x += sh.dx * SHOT_SPEED * dt; sh.y += sh.dy * SHOT_SPEED * dt; sh.life -= dt;
-        const c = this.grid.get(Math.floor(sh.x), Math.floor(sh.y));
-        if (M.isSolid(c)) { sh.life = 0; this.burst(sh.x, sh.y, 4, '#ffffff', 1); }
-        if (!p.dead && this.started && Math.abs(sh.x - p.x) < 0.55 && Math.abs(sh.y - p.y) < 0.55) { sh.life = 0; if (!this.immune('arrow')) this.hit('flecha'); }
+        sh.life -= dt;
+        // sub-passos de no máximo 0,3 célula: a flecha nunca "pula" o jogador nem uma parede
+        let rem = SHOT_SPEED * dt;
+        while (rem > 0 && sh.life > 0) {
+          const st = Math.min(rem, 0.3); rem -= st;
+          sh.x += sh.dx * st; sh.y += sh.dy * st;
+          const c = this.grid.get(Math.floor(sh.x), Math.floor(sh.y));
+          if (M.isSolid(c) || (c === T.EXIT && this.bossAlive())) { sh.life = 0; this.burst(sh.x - sh.dx * 0.3, sh.y - sh.dy * 0.3, 4, '#ffffff', 1); break; }
+          if (!p.dead && this.started && Math.abs(sh.x - p.x) < 0.6 && Math.abs(sh.y - p.y) < 0.6) { sh.life = 0; if (!this.immune('arrow')) this.hit('flecha'); break; }
+        }
       }
       this.shots = this.shots.filter((s) => s.life > 0);
 
@@ -998,7 +1005,7 @@
           if (!this.grid.rows.has(y)) continue;
           const wr = this.worldAtRow(y);
           this.drawWall(px, py, x, y, wr);
-          if (c in M.SHOOTERS) this.drawShooter(px, py, M.SHOOTERS[c], wr);
+          if (c in M.SHOOTERS) { const sq = this.shooters.find((q) => q.x === x && q.y === y); this.drawShooter(px, py, M.SHOOTERS[c], wr, sq ? sq.warn : 0); }
         }
       }
       // itens
@@ -1077,9 +1084,10 @@
       if ((x + y) % 2 === 0) ctx.fillRect(px + b * 2, py + m, s - b * 4, b);
       else ctx.fillRect(px + m, py + b * 2, b, s - b * 4);
     }
-    drawShooter(px, py, d, w) {
+    drawShooter(px, py, d, w, warn) {
       const ctx = this.ctx, s = this.tile;
       const r = s * 0.22;
+      if (warn > 0) { ctx.fillStyle = rgba('#ffffff', 0.2 + 0.5 * (Math.floor(this.t * 16) % 2) * (warn / 0.5)); ctx.fillRect(px + 2, py + 2, s - 4, s - 4); }
       ctx.fillStyle = '#0a0810';
       ctx.beginPath(); ctx.arc(px + s / 2 + d[0] * s * 0.2, py + s / 2 + d[1] * s * 0.2, r, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = w.accent; ctx.fillRect(px + s / 2 - r * 0.3, py + s / 2 - r * 0.3, r * 0.6, r * 0.6);

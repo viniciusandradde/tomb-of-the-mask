@@ -151,6 +151,14 @@
       }
     }
     if (unreachable.length) return { ok: false, reason: 'coletável inalcançável', unreachable, ...res };
+    const shortRays = shooterRays(rows).filter((r) => r.len < 3);
+    if (shortRays.length) return { ok: false, reason: 'atirador apontando para parede', shortRays, ...res };
+    // nenhum espinho "preso no nada"
+    for (let y = 1; y < rows.length - 1; y++) for (let x = 1; x < rows[y].length - 1; x++) {
+      if (rows[y][x] !== T.SPIKE) continue;
+      const open = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => rows[y + dy] && !isSolid(rows[y + dy][x + dx]) && rows[y + dy][x + dx] !== T.SPIKE && res.touched.has(key(x + dx, y + dy)));
+      if (!open) return { ok: false, reason: 'espinho preso no nada', at: [x, y], ...res };
+    }
     return { ok: true, ...res };
   }
 
@@ -213,6 +221,10 @@
         res = r2; placed++;
       }
 
+      // células que o jogador nunca ocupa viram parede AGORA (antes dos
+      // atiradores): o raio da flecha passa a ser medido na geometria final e
+      // nenhum objeto fica "preso no nada"
+      fillUnreachable(g, res);
       // atiradores: substituem paredes que olham para um corredor
       const mandatory = mandatoryStops(toRows(g));
       const spawnKey = key(sx, sy);
@@ -350,6 +362,24 @@
     for (let y = 1; y < g.length - 1; y++) for (let x = 1; x < g[0].length - 1; x++) {
       if (g[y][x] === T.EMPTY && !res.touched.has(key(x, y))) g[y][x] = T.WALL;
     }
+    // espinho sem nenhuma célula de aproximação (todas as vizinhas sólidas ou
+    // nunca ocupadas) é um objeto "preso no nada": vira parede
+    for (let y = 1; y < g.length - 1; y++) for (let x = 1; x < g[0].length - 1; x++) {
+      if (g[y][x] !== T.SPIKE) continue;
+      const open = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && !isSolid(g[y + dy][x + dx]) && g[y + dy][x + dx] !== T.SPIKE && res.touched.has(key(x + dx, y + dy)));
+      if (!open) g[y][x] = T.WALL;
+    }
+  }
+  // Comprimento do raio de cada atirador (células até o primeiro sólido)
+  function shooterRays(rows) {
+    const out = [];
+    for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) {
+      const c = rows[y][x]; if (!(c in SHOOTERS)) continue;
+      const [dx, dy] = SHOOTERS[c]; let len = 0, cx = x + dx, cy = y + dy;
+      while (rows[cy] && rows[cy][cx] !== undefined && !isSolid(rows[cy][cx])) { len++; cx += dx; cy += dy; }
+      out.push({ x, y, c, len });
+    }
+    return out;
   }
 
   function placeTraps(g, n, res, R, sx, sy, protectedCells) {
@@ -504,5 +534,5 @@
     return true;
   }
 
-  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, find, key, toGrid, toRows };
+  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, shooterRays, find, key, toGrid, toRows };
 });
