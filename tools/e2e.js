@@ -90,7 +90,11 @@ const { spawn } = require('child_process');
       // teleporta para dentro do chefe
       p.cx = Math.floor(game.boss.x); p.cy = 2; p.x = game.boss.x; p.y = 2.5; p.invul = 0;
       await wait(120);
-      log.push({ round, stun: +stun.toFixed(1), hp: game.boss.hp, state: game.state });
+      // depois do golpe o jogador nunca pode estar dentro de uma parede nem sem movimento possível
+      await new Promise((res) => { const t = setInterval(() => { if (!p.moving) { clearInterval(t); res(); } }, 20); });
+      const inWall = Maze.isSolid(game.grid.get(p.cx, p.cy));
+      const canMove = Maze.DIRS.some(([dx, dy]) => !game.blocked(p.cx + dx, p.cy + dy));
+      log.push({ round, stun: +stun.toFixed(1), hp: game.boss.hp, state: game.state, inWall, canMove, pos: [p.cx, p.cy] });
       if (game.state !== 'play') break;
       await wait(1200);
     }
@@ -255,6 +259,7 @@ const { spawn } = require('child_process');
   if (errors.length) { console.log('ERROS DE CONSOLE:'); errors.forEach((e) => console.log(' -', e)); process.exit(1); }
   if (result.state !== 'win') { console.log('FALHA: fase 1 não foi vencida'); process.exit(1); }
   if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play' || chefe.introState !== 'bossintro' || chefe.deathState !== 'bossdeath') { console.log('FALHA: chefão'); process.exit(1); }
+  if (chefe.log.some((r) => r.inWall || !r.canMove)) { console.log('FALHA: jogador preso após golpe no chefe'); process.exit(1); }
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
   if (!wb.warned || wb.mission.state !== 'mission' || wb.breakState.state !== 'break' || wb.insist !== 1 || wb.insistMax !== 4 || wb.night.state !== 'goodnight' || wb.stillBreak !== 'break' || wb.reload !== 'break' || !wb.done || wb.hifive !== 'hifive' || wb.after.medals < 1 || wb.after.playSec !== 0 || wb.resumed !== 'levels' || wb.parent !== 'parent') { console.log('FALHA: missão de brincar'); process.exit(1); }
   if (derrota.stillDead !== 'dead' || derrota.after !== 'play') { console.log('FALHA: tela de derrota'); process.exit(1); }

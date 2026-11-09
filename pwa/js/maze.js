@@ -470,9 +470,14 @@
       const g = toGrid(r.rows);
       // abre o corredor do chefe (3 linhas) e garante acesso a ele
       for (let y = 1; y <= 3; y++) for (let x = 1; x < o.w - 1; x++) if (g[y][x] !== T.EXIT) g[y][x] = T.EMPTY;
+      // nas duas pontas do corredor há sempre um buraco para voltar ao labirinto
+      for (const x of [1, o.w - 2]) if (g[4][x] === T.WALL) g[4][x] = T.EMPTY;
       // só recebem ponto as células do corredor que o jogador realmente atravessa
       const res = solve(toRows(g));
       if (!res.solvable || !res.fair) continue;
+      // Durante a luta a porta está TRANCADA: de toda parada tem que dar para
+      // chegar ao corredor (bater no chefe) e voltar ao labirinto (buscar o núcleo).
+      if (!arenaConnected(toRows(g))) continue;
       for (let y = 1; y <= 3; y++) for (let x = 1; x < o.w - 1; x++) if (g[y][x] === T.EMPTY && res.passable.has(key(x, y))) g[y][x] = T.DOT;
       const rows = toRows(g);
       const v = validate(rows);
@@ -482,5 +487,22 @@
     return null;
   }
 
-  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, find, key, toGrid, toRows };
+  // Verifica a arena com a porta trancada (E vira parede): a partir de cada
+  // parada alcançável, o conjunto alcançável precisa conter uma parada no
+  // corredor (linhas 1-3) e uma no labirinto (linha >= 5).
+  function arenaConnected(rows) {
+    const locked = rows.map((r, y) => (y === 0 ? r.replace(T.EXIT, T.WALL) : r));
+    const base = solve(locked);
+    if (!base.stops || base.stops.size === 0) return false;
+    for (const k of base.stops.keys()) {
+      const x = k % 1000, y = Math.floor(k / 1000);
+      const r = solve(locked, [x, y]);
+      let corridor = false, maze = false;
+      for (const k2 of r.stops.keys()) { const y2 = Math.floor(k2 / 1000); if (y2 >= 1 && y2 <= 3) corridor = true; if (y2 >= 5) maze = true; }
+      if (!corridor || !maze) return false;
+    }
+    return true;
+  }
+
+  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, find, key, toGrid, toRows };
 });
