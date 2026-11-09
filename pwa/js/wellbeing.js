@@ -151,7 +151,18 @@
   G.wbStartMission = function () {
     // escolhe missão sem repetir as últimas 3
     const pool = C.missions.map((_, i) => i).filter((i) => !this.wb.recent.includes(i));
-    const idx = pool[Math.floor(Math.random() * pool.length)];
+    const hour = new Date().getHours(), world = this.world ? this.world.id : '';
+    const themed = { selva: 'pelucia', vulcao: 'ferro', templo: 'capitao', mestre: 'chefao', nucleo: 'chefao' }[world];
+    const weights = pool.map((i) => {
+      const m = C.missions[i]; let w = 1;
+      if (['carrinhos', 'ferro', 'capitao'].includes(m.id)) w = 2; // favoritos
+      if (m.id === themed) w = 3;
+      if (hour >= 18 && ['janela', 'livro', 'agua'].includes(m.id)) w *= 2; // noite: missões calmas
+      if (hour >= 19 && ['pulos', 'chefao'].includes(m.id)) w = 0;
+      return w;
+    });
+    let total = weights.reduce((a, b) => a + b, 0), r = Math.random() * (total || 1), idx = pool[0];
+    for (let k = 0; k < pool.length; k++) { r -= weights[k]; if (r <= 0) { idx = pool[k]; break; } }
     this.wb.missionIdx = idx; this.wb.recent = [idx].concat(this.wb.recent).slice(0, 3);
     this.wb.status = 'mission'; this.wb.insistN = 0; this.wb.missionStart = 0;
     this.wbSave();
@@ -192,6 +203,9 @@
     if (this.wbHit) return;
     this.wbHit = true; this.wbT = 0;
     this.save.wbCfg.medals = (this.save.wbCfg.medals || 0) + 1;
+    const mid = (C.missions[this.wb.missionIdx] || {}).id;
+    this.save.wbCfg.stickers = this.save.wbCfg.stickers || [];
+    if (mid && !this.save.wbCfg.stickers.includes(mid)) this.save.wbCfg.stickers.push(mid);
     this.wb.cycles++;
     const finished = this.wb.cycles >= this.save.wbCfg.cyclesPerDay;
     this.wb.status = finished ? 'done' : 'idle'; this.wb.playSec = 0; this.wb.warned = false; this.wb.missionStart = 0; this.wb.insistN = 0; this.wbSave();
@@ -255,6 +269,7 @@
     this.drawButton('TAMBEM NO MODO CLASSICO: ' + (cfg.enabledClassic ? 'SIM' : 'NAO'), cx, y, w, () => { cfg.enabledClassic = !cfg.enabledClassic; saveCfg(); }, '#8cf5ff', 'pc'); y += step;
     F.text(ctx, 'HOJE: ' + Math.floor(this.wb.playSec / 60) + ' MIN NESTA RODADA, ' + this.wb.cycles + ' DE ' + cfg.cyclesPerDay + ' AVENTURAS   MISSOES: ' + (cfg.medals || 0), cx, y - u * 2, small, '#ffd23f', 'center'); y += step * 0.8;
     if (this.wb.status !== 'idle') { this.drawButton('LIBERAR O JOGO AGORA', cx, y, w, () => this.wbParentUnlock(), '#ffd23f', 'pu'); y += step; }
+    this.drawButton('PAUSAR AGORA (APOS A FASE)', cx, y, w, () => { this.wb.playSec = Math.max(this.wb.playSec, this.wbLimit()); this.wb.warned = true; this.wbSave(); this.buttons = []; this.toastMsg('A MISSAO VEM NO FIM DA FASE'); }, '#ffd23f', 'pp'); y += step;
     else { this.drawButton('ZERAR O CONTADOR DE HOJE', cx, y, w, () => { this.wb.playSec = 0; this.wb.warned5 = false; this.wb.warned2 = false; this.wbSave(); this.buttons = []; this.toastMsg('ZERADO'); }, '#888899', 'pz'); y += step; }
     F.text(ctx, 'SBP / OMS / AAP: ATE 1 HORA DE TELA POR DIA DE 2 A 5 ANOS,', cx, this.H - u * 38, small, '#888899', 'center');
     F.text(ctx, 'COM ADULTO POR PERTO; NADA NA HORA DE DORMIR.', cx, this.H - u * 30, small, '#888899', 'center');
@@ -388,7 +403,7 @@
     if (!this.wbHit) {
       const bob = Math.sin(this.t * 6) * u;
       F.text(ctx, '↑ TOCA AQUI ↑', cx, hy + k * 0.6 + 10 + bob, u, '#ffd23f', 'center', { shadow: '#000' });
-      if (!this.buttons.find((b) => b.id === 'hand')) this.buttons.push({ id: 'hand', x: hx - k * 0.6, y: hy - k * 0.75, w: k * 1.2, h: k * 1.4, fn: () => this.wbHiFive() });
+      if (!this.buttons.find((b) => b.id === 'hand')) this.buttons.push({ id: 'hand', x: 0, y: hy - k * 0.75, w: this.W, h: this.H - (hy - k * 0.75), fn: () => this.wbHiFive() });
     } else {
       // medalha
       const m = this.save.wbCfg.medals || 0;
@@ -411,6 +426,24 @@
     this.drawSleepingMask(cx, this.H * 0.58, Math.min(this.W, this.H) * 0.22);
     F.text(ctx, 'VOCE BRINCOU MUITO HOJE!', cx, this.H * 0.8, Math.max(1, u - 1), '#ffd23f', 'center');
     F.text(ctx, 'MISSOES CUMPRIDAS: ' + (this.save.wbCfg.medals || 0), cx, this.H * 0.8 + u * 9, Math.max(1, u - 1), '#ffffff', 'center');
+  };
+  // Quadro de Aventuras: figurinhas das missões cumpridas (decorativo, sem valor no jogo)
+  G.drawStickerBoard = function (cx, y) {
+    const ctx = this.ctx, u = this.ui, st = (this.save.wbCfg && this.save.wbCfg.stickers) || [];
+    if (!st.length) return;
+    const cell = u * 7, cols = Math.min(6, Math.max(3, st.length)), rows = Math.ceil(Math.min(st.length, 12) / cols);
+    const w = cols * cell + 12, h = rows * cell + 12 + u * 7;
+    const x0 = cx - w / 2;
+    ctx.fillStyle = 'rgba(3,2,8,0.6)'; ctx.fillRect(x0, y, w, h);
+    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y + 1, w - 2, h - 2);
+    F.text(ctx, '\u2600 QUADRO DE AVENTURAS', cx, y + 4, Math.max(1, u - 1), '#ffd23f', 'center');
+    st.slice(0, 12).forEach((id, i) => {
+      const m = C.missions.find((q) => q.id === id); if (!m) return;
+      const col = i % cols, row = Math.floor(i / cols);
+      const px = x0 + 6 + col * cell + cell / 2, py = y + u * 7 + 8 + row * cell + cell / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(px - cell / 2 + 2, py - cell / 2 + 2, cell - 4, cell - 4);
+      this.drawWbIcon(m.icon, px, py, cell * 0.8);
+    });
   };
   // ícone discreto de aviso durante o jogo
   G.drawWbHud = function () {

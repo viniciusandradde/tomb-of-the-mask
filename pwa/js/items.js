@@ -25,6 +25,7 @@
     { id: 'fantasma', name: 'FANTASMA', color: '#8cf5ff', eye: '#0a2a33', cost: 1600, level: 30, permaMagnet: true, desc: 'IMA DE PONTOS PERMANENTE' },
     { id: 'rei', name: 'REI', color: '#f5c542', eye: '#4a3a00', cost: 2000, level: 40, coin: 100, boost: 30, desc: 'MOEDAS X2  +30% MULTIPLICADOR' },
     { id: 'sombra', name: 'SOMBRA', color: '#b04cff', eye: '#eaffff', cost: 2500, level: 50, slowBats: true, immune: 'trap', desc: 'MORCEGOS LENTOS  IMUNE A ESP. MOVEIS' },
+    { id: 'sonequinha', name: 'SONEQUINHA', color: '#c9b8ff', eye: '#3a2a6a', cost: 0, level: 1, stickers: 5, freeze: 20, desc: 'PREMIO: 5 MISSOES DE BRINCAR. +20% CONGELAR' },
     { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 81, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU: +50% EM TUDO E ESCUDO INICIAL' },
   ];
   root.MASKS = MASKS;
@@ -49,6 +50,7 @@
   G.immune = function (kind) { return this.mask().immune === kind; };
   G.maskUnlocked = function (m) {
     if (m.zerou) return !!this.save.zerou;
+    if (m.stickers) return ((this.save.wbCfg && this.save.wbCfg.stickers) || []).length >= m.stickers;
     return this.save.unlocked >= m.level;
   };
 
@@ -183,12 +185,12 @@
       let tag, col;
       if (equipped) { tag = 'EM USO'; col = '#8cf5ff'; }
       else if (owned) { tag = 'USAR'; col = '#ffffff'; }
-      else if (!unlocked) { tag = m.zerou ? 'ZERE O JOGO' : 'NIVEL ' + m.level; col = '#ff3b3b'; }
+      else if (!unlocked) { tag = m.zerou ? 'ZERE O JOGO' : m.stickers ? m.stickers + ' MISSOES' : 'NIVEL ' + m.level; col = '#ff3b3b'; }
       else { tag = m.cost ? '$' + m.cost : 'GRATIS'; col = this.save.coins >= m.cost ? '#ffd23f' : '#ff3b3b'; }
       F.text(ctx, tag, x + w - 10, y + h / 2 - u * 3.5, u, col, 'right');
       if (!this.buttons.find((b) => b.id === 'm' + m.id)) this.buttons.push({ id: 'm' + m.id, x, y, w, h, fn: () => {
         if (owned) { this.save.mask = m.id; this.saveNow(); this.buttons = []; this.sprites = {}; return; }
-        if (!unlocked) { this.audio.bump(); this.toastMsg(m.zerou ? 'VENCA O CHEFAO MESTRE' : 'CHEGUE A FASE ' + m.level); return; }
+        if (!unlocked) { this.audio.bump(); this.toastMsg(m.zerou ? 'VENCA O CHEFAO MESTRE' : m.stickers ? 'CUMPRA ' + m.stickers + ' MISSOES DE BRINCAR' : 'CHEGUE A FASE ' + m.level); return; }
         if (this.save.coins >= m.cost) { this.save.coins -= m.cost; this.save.masks.push(m.id); this.save.mask = m.id; this.saveNow(); this.audio.buy(); this.buttons = []; this.sprites = {}; this.toastMsg('NOVA MASCARA!'); if (this.kids()) this.speak('Máscara nova!'); }
         else { this.audio.bump(); this.toastMsg('FALTAM $' + (m.cost - this.save.coins)); }
       } });
