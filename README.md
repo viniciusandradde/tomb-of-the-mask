@@ -42,7 +42,12 @@ Controles: deslizar na tela, ou setas / WASD no teclado. `P` pausa, `R` reinicia
 | `node tools/process-assets.js` | converte as artes em `pwa/assets/src` em fundos e ícones |
 | `npm run test:e2e` | teste de fumaça com Playwright (joga a fase 1 com o solver) |
 
-Leia `ANALISE.md` para a análise completa do jogo original, decisões de design e questões legais.
+## Documentação
+
+- `docs/MANUAL.md`: manual para pais e crianças (instalar, jogar, modos, itens, Missão de Brincar, área dos pais, problemas comuns).
+- `docs/ARQUITETURA.md`: arquitetura técnica, formato das fases, garantias do gerador, estados, salvamento, como estender, testes e publicação.
+- `ANALISE.md`: análise do jogo original, decisões de design, metodologia da pausa saudável com fontes e questões legais.
+- `CHANGELOG.md`: histórico de versões.
 
 ## Versão antiga (Java)
 

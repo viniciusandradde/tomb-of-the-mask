@@ -195,7 +195,7 @@
     }
 
     input(dir) {
-      if (this.state === 'dead') { this.restart(); return; }
+      if (this.state === 'dead') return; // na tela de derrota só os botões grandes agem
       if (this.state === 'play') this.queueMove(dir);
       if (this.state === 'title') this.goto('worlds');
       if (this.state === 'levels') this.mapMove(dir === 'up' || dir === 'right' ? 1 : -1);
@@ -214,7 +214,6 @@
         if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) { this.audio.click(); b.fn(); return; }
       }
       if (this.state === 'title') this.goto('worlds');
-      else if (this.state === 'dead') this.restart();
       else if (this.state === 'win') this.nextLevel();
       else if (this.state === 'bossintro' && this.skipBossIntro) this.skipBossIntro();
     }
@@ -1381,6 +1380,19 @@
       F.text(ctx, label, cx, cy - u * 3.5, u, '#ffffff', 'center');
       if (!this.buttons.find((b) => b.id === id)) this.buttons.push({ id, x, y, w, h, fn });
     }
+    // Botão grande para crianças: alto, cor cheia, ícone grande à esquerda e texto grande
+    drawBigButton(label, icon, cx, cy, w, fn, color, id) {
+      const ctx = this.ctx, u = this.ui, h = u * 7 + 44;
+      const x = cx - w / 2, y = cy - h / 2;
+      const pressed = this.pointer && this.pointer.down && this.pointer.x >= x && this.pointer.x <= x + w && this.pointer.y >= y && this.pointer.y <= y + h;
+      ctx.fillStyle = rgba('#000000', 0.35); ctx.fillRect(x + 4, y + 6, w, h);
+      ctx.fillStyle = pressed ? shade(color, 0.8) : color; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = rgba('#ffffff', 0.18); ctx.fillRect(x, y, w, h * 0.35);
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+      F.text(ctx, icon, x + u * 5 + 10, cy - u * 7, u * 2, '#ffffff', 'center');
+      F.text(ctx, label, x + u * 12 + 12 + (w - u * 12 - 24) / 2, cy - u * 3.5 * 1.4, Math.round(u * 1.4), '#ffffff', 'center', { shadow: rgba('#000000', 0.5) });
+      if (!this.buttons.find((b) => b.id === id)) this.buttons.push({ id, x, y, w, h, fn });
+    }
     renderPause() {
       this.overlay(0.75);
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
@@ -1404,9 +1416,10 @@
         : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU', chefao: 'O CHEFAO TE ESMAGOU' };
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
       if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
-      if (Math.floor(this.t * 2) % 2 === 0) F.text(this.ctx, 'TOQUE PARA TENTAR DE NOVO', cx, cy + u * 16, u, '#ffd23f', 'center');
-      const w = Math.min(this.W * 0.8, 320);
-      this.drawButton('⌂ MENU', cx, cy + u * 36, w, () => { this.audio.stopMusic(); this.goto('levels'); }, null, 'd1');
+      const w = Math.min(this.W * 0.86, 360), bh = u * 7 + 44;
+      this.drawBigButton('JOGAR DE NOVO', '\u21BB', cx, cy + u * 18 + bh / 2, w, () => this.restart(), '#2e9e4f', 'd0');
+      this.drawBigButton('VOLTAR AO MAPA', '\u2302', cx, cy + u * 18 + bh * 1.5 + 14, w, () => { this.audio.stopMusic(); this.goto('levels'); }, '#3f7dff', 'd1');
+      if (this.player.shield <= 0 && this.save.inv && this.save.inv.shield > 0) F.text(this.ctx, 'DICA: 2 TOQUES NA TELA LIGAM O ESCUDO', cx, cy + u * 18 + bh * 2 + 30, Math.max(1, u - 1), '#8cf5ff', 'center');
     }
     renderWin() {
       const k = clamp((this.t - this.winAt) * 1.5, 0, 1);
@@ -1431,7 +1444,7 @@
       if (this.chest && this.drawChest) this.drawChest(cx, cy + u * 24 + (this.newWorld ? u * 8 : 0));
       const w = Math.min(this.W * 0.8, 320);
       const last = this.levelIndex + 1 >= root.LEVELS.length;
-      this.drawButton(last ? 'FIM! VOLTAR' : 'PROXIMA ▶', cx, cy + u * 38, w, () => this.nextLevel(), null, 'w1');
+      this.drawBigButton(last ? 'FIM! VOLTAR' : 'PROXIMA FASE', '\u25B6', cx, cy + u * 38, w, () => this.nextLevel(), '#2e9e4f', 'w1');
       this.drawButton('↻ REPETIR', cx - w / 4 - 4, cy + u * 54, w / 2 - 8, () => this.restart(), null, 'w2');
       this.drawButton('⌂ MENU', cx + w / 4 + 4, cy + u * 54, w / 2 - 8, () => { this.audio.stopMusic(); this.goto('levels'); }, null, 'w3');
     }
@@ -1446,9 +1459,9 @@
       F.text(this.ctx, 'ALTURA ' + Math.floor(this.height) + 'M', cx, cy - u * 14, u, '#ffffff', 'center');
       F.text(this.ctx, 'PONTOS ' + this.arcadeScore(), cx, cy - u * 4, u, '#ffffff', 'center');
       F.text(this.ctx, (this.newBest ? 'NOVO RECORDE! ' : 'RECORDE ') + this.save.arcadeBest, cx, cy + u * 8, u, '#ffd23f', 'center');
-      const w = Math.min(this.W * 0.8, 320);
-      this.drawButton('↻ JOGAR DE NOVO', cx, cy + u * 28, w, () => this.startArcade(), null, 'a1');
-      this.drawButton('⌂ MENU', cx, cy + u * 44, w, () => { this.audio.stopMusic(); this.goto('title'); }, null, 'a2');
+      const w = Math.min(this.W * 0.86, 360), bh = u * 7 + 44;
+      this.drawBigButton('JOGAR DE NOVO', '\u21BB', cx, cy + u * 20 + bh / 2, w, () => this.startArcade(), '#2e9e4f', 'a1');
+      this.drawBigButton('VOLTAR AO MENU', '\u2302', cx, cy + u * 20 + bh * 1.5 + 14, w, () => { this.audio.stopMusic(); this.goto('title'); }, '#3f7dff', 'a2');
     }
 
     // ------------------------------------------------------------ menus

@@ -211,6 +211,12 @@ const { spawn } = require('child_process');
     return { state: game.state, msg: game.deathMsg };
   });
   await page.screenshot({ path: path.join(out, '5b-opa.png') });
+  const derrota = await page.evaluate(async () => {
+    const before = game.state; game.input('up'); game.tap(5, 5); await new Promise((r) => setTimeout(r, 100));
+    const stillDead = game.state; const btn = game.buttons.find((b) => b.id === 'd0'); btn.fn(); await new Promise((r) => setTimeout(r, 100));
+    return { before, stillDead, after: game.state, botoes: ['d0', 'd1'].every((id) => !!game.buttons.find((b) => b.id === id) || game.state === 'play') };
+  });
+  console.log('tela de derrota:', JSON.stringify(derrota));
   console.log('modo lúdico (opa):', JSON.stringify(ludico));
 
   // uma fase com lava e inimigos
@@ -251,6 +257,7 @@ const { spawn } = require('child_process');
   if (!chefe.lockedBefore || chefe.lockedAfter || chefe.hp !== 0 || chefe.state !== 'play' || chefe.introState !== 'bossintro' || chefe.deathState !== 'bossdeath') { console.log('FALHA: chefão'); process.exit(1); }
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
   if (!wb.warned || wb.mission.state !== 'mission' || wb.breakState.state !== 'break' || wb.insist !== 1 || wb.insistMax !== 4 || wb.night.state !== 'goodnight' || wb.stillBreak !== 'break' || wb.reload !== 'break' || !wb.done || wb.hifive !== 'hifive' || wb.after.medals < 1 || wb.after.playSec !== 0 || wb.resumed !== 'levels' || wb.parent !== 'parent') { console.log('FALHA: missão de brincar'); process.exit(1); }
+  if (derrota.stillDead !== 'dead' || derrota.after !== 'play') { console.log('FALHA: tela de derrota'); process.exit(1); }
   if (itens.afterUse.inv !== 1 || itens.afterUse.shield !== 1 || itens.gain.coins !== 1 || itens.gain.score !== 30 || !itens.imune || itens.dur.coelho <= itens.dur.freeze0) { console.log('FALHA: itens'); process.exit(1); }
   if (morte.state !== 'dead' || morte.cause !== 'chefao') { console.log('FALHA: contato com chefe deveria matar'); process.exit(1); }
   console.log('e2e ok; capturas em', out);

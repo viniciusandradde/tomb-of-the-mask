@@ -171,6 +171,13 @@ retráteis (até 7), morcegos (até 6), flechas (até 6), lava/água mais rápid
 longos. Chefes finais com mais vida (Rei das Sombras 6, Coração do Núcleo 7, Mestre 10) e ataques mais frequentes. Se um
 conjunto de parâmetros não gera fase justa, o gerador reduz os perigos em passos de 12% até conseguir.
 
+### 3.2.6 Tela de derrota pensada para a criança
+
+Como no original, ao perder aparecem **dois botões grandes** ocupando a largura da tela: **JOGAR DE NOVO** (verde, ícone
+↻) e **VOLTAR AO MAPA** (azul, ícone ⌂), com sombra e resposta visual ao toque. Toques e deslizes fora dos botões não fazem
+nada, evitando reinícios acidentais. No Modo Lúdico a tela diz "OPA!" com a causa em linguagem simples e uma frase de
+incentivo; se houver escudos no inventário, lembra que dois toques ligam o escudo.
+
 ### 3.3 Interface, visual e áudio
 
 - Tudo em canvas com fonte bitmap própria (visual autêntico de pixel art, sem baixar fontes).
