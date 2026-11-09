@@ -97,6 +97,19 @@ até a saída. O gerador:
 - Entrada: deslize reconhecido com 10 px (antes 24), flick curto de 6 px conta ao soltar, e arrastar em "L" sem levantar o
   dedo enfileira a próxima direção.
 
+### 3.2.2 Mapa de mundo, chefões e o Chefão Mestre
+
+- **Mapa estilo Mario**: cada mundo é um caminho em zigue-zague com um nó por fase; o personagem anda pelo
+  mapa até a fase escolhida (deslize ou toque). Um painel mostra a **prévia** antes de entrar: miniatura do labirinto,
+  estrelas, melhor pontuação, perigos (espinhos, morcegos, flechas, lava/água), altura e número mínimo de movimentos.
+- **Chefão no fim de cada mundo** (fase 10): arena aberta com um corredor largo no topo onde o chefe patrulha. A saída
+  fica trancada (cadeado) até ele cair. O chefe solta tiros que caem e invoca morcegos. Para feri-lo, pegue o **núcleo
+  azul** que aparece no labirinto: ele fica tonto por 6 s (olhos em X, piscando azul); deslize até ele para dar um golpe.
+  Encostar nele acordado mata. Vida de 3 a 5 golpes conforme o mundo. Derrotá-lo dá 1000 pontos e abre a porta.
+- **Chefão Mestre** (mundo 9, "Tumba do Mestre"): desbloqueia ao vencer o chefe do mundo 8. Vida 8, mais rápido, atira
+  mais. Vencê-lo mostra "VOCÊ ZEROU!" com chuva de confete e marca o jogo como zerado no salvamento.
+- Todas as arenas passam pelo mesmo validador (saída e coletáveis alcançáveis, nenhuma parada sem volta).
+
 ### 3.3 Interface, visual e áudio
 
 - Tudo em canvas com fonte bitmap própria (visual autêntico de pixel art, sem baixar fontes).

@@ -428,5 +428,27 @@
     return null;
   }
 
-  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, find, key, toGrid, toRows };
+  // Arena de chefão: labirinto aberto com um corredor largo no topo (linhas 1-3)
+  // onde o chefe patrulha. A saída fica no teto, trancada até o chefe cair.
+  function generateArena(opts, R) {
+    const o = Object.assign({ w: 12, h: 22, wallDensity: 0.13, spikes: 2, coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 6, maxMoves: 60 }, opts);
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const r = generate(o, R);
+      if (!r) continue;
+      const g = toGrid(r.rows);
+      // abre o corredor do chefe (3 linhas) e garante acesso a ele
+      for (let y = 1; y <= 3; y++) for (let x = 1; x < o.w - 1; x++) if (g[y][x] !== T.EXIT) g[y][x] = T.EMPTY;
+      // só recebem ponto as células do corredor que o jogador realmente atravessa
+      const res = solve(toRows(g));
+      if (!res.solvable || !res.fair) continue;
+      for (let y = 1; y <= 3; y++) for (let x = 1; x < o.w - 1; x++) if (g[y][x] === T.EMPTY && res.passable.has(key(x, y))) g[y][x] = T.DOT;
+      const rows = toRows(g);
+      const v = validate(rows);
+      if (!v.ok) continue;
+      return { rows, moves: v.moves };
+    }
+    return null;
+  }
+
+  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, find, key, toGrid, toRows };
 });
