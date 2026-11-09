@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## 1.7.1 — Correção dos chefões
+- Após um golpe, o recuo levava o jogador para dentro da parede do chão do corredor; agora ele volta pela passagem mais próxima e desliza para o labirinto, longe do chefe.
+- Arenas regeneradas com buracos garantidos nas duas pontas do corredor e novo validador: com a porta trancada, de toda parada dá para chegar ao chefe e voltar ao labirinto (as fases 10 e 50 estavam presas).
+- `tools/ship.sh`: publica somente se sintaxe, validador e teste e2e passarem.
+
 ## 1.7 — Missão de Brincar (pausa saudável)
 - Metodologia de dois especialistas (psicopedagogia e diversão digital): um aviso no fim da fase, missão fora da tela com
   voz, pausa persistente com redirecionamento gentil limitado, hi five, figurinhas, 2 aventuras/dia, área dos pais.
