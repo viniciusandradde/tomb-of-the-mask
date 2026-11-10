@@ -787,7 +787,7 @@
 
     enterCell(x, y) {
       const c = this.grid.get(x, y);
-      if (c === T.SPIKE) { this.die('espinho'); return; }
+      if (c === T.SPIKE) { if (this.player.invul > 0) return; this.die('espinho'); return; }
       if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); if (tr && this.trapState(tr).deadly && this.player.invul <= 0 && !this.immune('trap')) { this.die('espinho'); return; } }
       if (this.bossHazardAt && this.player.invul <= 0 && this.bossHazardAt(x, y)) { this.die('chefao'); return; }
       if (c === T.EXIT) { if (this.mode === 'stage') this.winLevel(); return; }

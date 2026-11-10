@@ -224,12 +224,15 @@
         // do corredor e desliza para o labirinto (longe do chefe, nunca em parede)
         // entre as colunas com passagem, a mais longe do chefe (e que desça pelo menos 2 células)
         let col = clamp(p.cx, 1, COLS - 2), best = -1;
+        const rowsNow = []; for (let y = this.grid.minY; y <= this.grid.maxY; y++) rowsNow.push(this.grid.rows.get(y).join(''));
         for (let x = 1; x <= COLS - 2; x++) {
           if (this.blocked(x, 4)) continue;
-          let depth = 0; while (!this.blocked(x, 4 + depth) && depth < 40) depth++;
-          const score = Math.abs(x - b.x) + (depth >= 2 ? 10 : 0);
+          const sl = M.slide(rowsNow, x, 3, 0, 1); // descida real: sem espinho no caminho
+          if (sl.dead || sl.path.length < 1) continue;
+          const score = Math.abs(x - b.x) + (sl.path.length >= 2 ? 10 : 0);
           if (score > best) { best = score; col = x; }
         }
+        if (best < 0) col = clamp(p.cx, 1, COLS - 2);
         p.invul = Math.max(p.invul, 2.0);
         p.cx = col; p.cy = 3; p.x = col + 0.5; p.y = 3.5;
         if (!this.blocked(col, 4)) this.beginMove([0, 1]);
