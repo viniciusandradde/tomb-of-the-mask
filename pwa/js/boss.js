@@ -222,12 +222,15 @@
         p.invul = Math.max(p.invul, 1.2); p.moving = false; p.queued = null;
         // recuo seguro: vai para a coluna mais próxima que tem passagem no chão
         // do corredor e desliza para o labirinto (longe do chefe, nunca em parede)
-        let col = clamp(p.cx, 1, COLS - 2);
-        for (let d = 0; d < COLS; d++) {
-          const l = col - d, r = col + d;
-          if (l >= 1 && !this.blocked(l, 4)) { col = l; break; }
-          if (r <= COLS - 2 && !this.blocked(r, 4)) { col = r; break; }
+        // entre as colunas com passagem, a mais longe do chefe (e que desça pelo menos 2 células)
+        let col = clamp(p.cx, 1, COLS - 2), best = -1;
+        for (let x = 1; x <= COLS - 2; x++) {
+          if (this.blocked(x, 4)) continue;
+          let depth = 0; while (!this.blocked(x, 4 + depth) && depth < 40) depth++;
+          const score = Math.abs(x - b.x) + (depth >= 2 ? 10 : 0);
+          if (score > best) { best = score; col = x; }
         }
+        p.invul = Math.max(p.invul, 2.0);
         p.cx = col; p.cy = 3; p.x = col + 0.5; p.y = 3.5;
         if (!this.blocked(col, 4)) this.beginMove([0, 1]);
         this.audio.shieldHit(); this.burst(b.x, b.y, 30, this.world.color, 4); this.burst(b.x, b.y, 12, '#ffffff', 3);

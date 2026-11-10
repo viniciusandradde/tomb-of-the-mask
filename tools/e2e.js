@@ -94,7 +94,7 @@ const { spawn } = require('child_process');
       await new Promise((res) => { const t = setInterval(() => { if (!p.moving) { clearInterval(t); res(); } }, 20); });
       const inWall = Maze.isSolid(game.grid.get(p.cx, p.cy));
       const canMove = Maze.DIRS.some(([dx, dy]) => !game.blocked(p.cx + dx, p.cy + dy));
-      log.push({ round, stun: +stun.toFixed(1), hp: game.boss.hp, state: game.state, inWall, canMove, pos: [p.cx, p.cy] });
+      log.push({ round, stun: +stun.toFixed(1), hp: game.boss.hp, state: game.state, cause: game.deathCause, inWall, canMove, pos: [p.cx, p.cy] });
       if (game.state !== 'play') break;
       await wait(1200);
     }
