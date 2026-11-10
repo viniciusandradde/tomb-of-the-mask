@@ -45,7 +45,7 @@ Dockerfile              imagem Node Alpine
   células de passagem → pontos nas células atravessáveis → moedas longe do caminho → power-ups → paredes nas células
   inalcançáveis → morcegos (faixa ≥4, não cobre início nem paradas obrigatórias) → `validate`.
 - `generateChunk` (arcade): idem, com a abertura do chão modelada como perigo (nunca rota de volta).
-- `generateArena` (chefes): abre o corredor das linhas 1–3 e valida.
+- `generateArena` (chefes): abre o corredor das linhas 1–3, garante buracos nas duas pontas e valida com `arenaConnected`: com a porta trancada, de toda parada dá para ir ao corredor e voltar; e, sem usar o corredor, todas as paradas do labirinto se alcançam (sem bolsões).
 - `mandatoryStops`: paradas por onde todo caminho passa (pontos de articulação), via `solve` com `forbidStop`.
 
 ## Estados do jogo (Game.state)

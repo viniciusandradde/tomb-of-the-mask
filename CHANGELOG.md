@@ -1,5 +1,8 @@
 # Histórico de versões
 
+## 1.7.3 — Arenas sem bolsões
+- Regra nova do validador: no labirinto da arena, todas as paradas se alcançam mutuamente SEM passar pelo corredor do chefe. Antes, 8 das 9 arenas tinham bolsões (ex.: a coluna da direita na fase 20) cuja única saída era a faixa do chefe; todas regeneradas.
+
 ## 1.7.2 — Flechas e elementos presos
 - 120 dos 209 atiradores apontavam para uma parede (raio zero) e 40 tinham raio curto: o preenchimento das células inalcançáveis tapava a linha de tiro. Agora o preenchimento acontece antes, o raio é medido na geometria final e o validador exige raio mínimo de 3.
 - Aviso visual de 0,5 s antes de cada tiro; a flecha anda em sub-passos e não "pula" o jogador nem a parede; some na porta trancada do chefe.

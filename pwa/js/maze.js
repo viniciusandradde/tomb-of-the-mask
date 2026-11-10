@@ -524,12 +524,24 @@
     const locked = rows.map((r, y) => (y === 0 ? r.replace(T.EXIT, T.WALL) : r));
     const base = solve(locked);
     if (!base.stops || base.stops.size === 0) return false;
+    const mazeStops = [], corridorStops = [];
+    for (const k of base.stops.keys()) { const y = Math.floor(k / 1000); (y >= 4 ? mazeStops : corridorStops).push(k); }
+    if (!mazeStops.length || !corridorStops.length) return false;
+    // 1) de toda parada: dá para chegar ao corredor e voltar ao labirinto
     for (const k of base.stops.keys()) {
-      const x = k % 1000, y = Math.floor(k / 1000);
-      const r = solve(locked, [x, y]);
+      const r = solve(locked, [k % 1000, Math.floor(k / 1000)]);
       let corridor = false, maze = false;
       for (const k2 of r.stops.keys()) { const y2 = Math.floor(k2 / 1000); if (y2 >= 1 && y2 <= 3) corridor = true; if (y2 >= 5) maze = true; }
       if (!corridor || !maze) return false;
+    }
+    // 2) SEM passar pelo corredor (linhas 1-3 tratadas como mortais), todas as
+    //    paradas do labirinto se alcançam mutuamente: nenhum bolsão cuja única
+    //    saída seja a faixa do chefe
+    const noCorr = locked.map((r, y) => (y >= 1 && y <= 3 ? r.replace(/[^#]/g, (ch, i) => (i === 0 || i === r.length - 1 ? ch : T.SPIKE)) : r));
+    const need = new Set(mazeStops);
+    for (const k of mazeStops) {
+      const r = solve(noCorr, [k % 1000, Math.floor(k / 1000)]);
+      for (const m of need) if (!r.stops.has(m)) return false;
     }
     return true;
   }
