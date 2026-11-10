@@ -1,5 +1,5 @@
 /* sw.js — cache offline. Atualize CACHE ao publicar uma nova versão. */
-const CACHE = 'tumba-v11';
+const CACHE = 'tumba-v12';
 const ASSETS = [
   './', './index.html', './style.css', './manifest.webmanifest',
   './js/maze.js', './js/levels.js', './js/font.js', './js/audio.js', './js/game.js', './js/boss.js', './js/map.js', './js/items.js', './js/wellbeing.js', './js/app.js',

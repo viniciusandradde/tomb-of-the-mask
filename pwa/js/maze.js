@@ -500,8 +500,12 @@
       const g = toGrid(r.rows);
       // abre o corredor do chefe (3 linhas) e garante acesso a ele
       for (let y = 1; y <= 3; y++) for (let x = 1; x < o.w - 1; x++) if (g[y][x] !== T.EXIT) g[y][x] = T.EMPTY;
-      // nas duas pontas do corredor há sempre um buraco para voltar ao labirinto
-      for (const x of [1, o.w - 2]) if (g[4][x] === T.WALL) g[4][x] = T.EMPTY;
+      // nas duas pontas do corredor há sempre um buraco para voltar ao labirinto,
+      // e a descida por ele nunca passa por espinho
+      for (const x of [1, o.w - 2]) {
+        if (g[4][x] === T.WALL) g[4][x] = T.EMPTY;
+        for (let y = 4; y < g.length - 1 && !isSolid(g[y][x]); y++) if (g[y][x] === T.SPIKE) g[y][x] = T.EMPTY;
+      }
       // só recebem ponto as células do corredor que o jogador realmente atravessa
       const res = solve(toRows(g));
       if (!res.solvable || !res.fair) continue;
