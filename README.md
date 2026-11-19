@@ -48,6 +48,8 @@ Controles: deslizar na tela, ou setas / WASD no teclado. `P` pausa, `R` reinicia
 - `docs/ARQUITETURA.md`: arquitetura técnica, formato das fases, garantias do gerador, estados, salvamento, como estender, testes e publicação.
 - `ANALISE.md`: análise do jogo original, decisões de design, metodologia da pausa saudável com fontes e questões legais.
 - `CHANGELOG.md`: histórico de versões.
+- `docs/standards/CHILD-WELLBEING-STANDARD.md`: Padrão VSA de Bem-Estar Digital Infantil, que nasceu da Missão de Brincar e vale para todas as aplicações infantis da VSA.
+- `docs/ADOCAO-PADRAO-BEM-ESTAR.md`: situação deste jogo frente ao padrão e correções recomendadas.
 
 ## Versão antiga (Java)
 
