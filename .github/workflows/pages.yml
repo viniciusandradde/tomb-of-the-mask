@@ -23,6 +23,7 @@ jobs:
       - name: Verifica sintaxe de todos os scripts do jogo
         run: for f in pwa/js/*.js pwa/sw.js server.js; do node --check "$f"; done
       - run: node tools/validate.js
+      - run: node tools/lint-text.js
       - uses: actions/configure-pages@v5
         with: { enablement: true }
       - uses: actions/upload-pages-artifact@v3

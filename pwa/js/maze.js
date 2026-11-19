@@ -370,6 +370,37 @@
       if (!open) g[y][x] = T.WALL;
     }
   }
+  // Viabilidade no TEMPO com lava/água subindo: Dijkstra sobre paradas, com
+  // tempo de reação por movimento, exigindo que o jogador fique sempre acima
+  // da lava com folga (margin, em linhas). Lava começa em h+1 e sobe após delay.
+  function lavaFeasible(rows, fluid, opts) {
+    const o = Object.assign({ speed: 18, react: 0.5, margin: 2.5 }, opts || {});
+    const s = find(rows, T.SPAWN); if (!s) return { ok: false };
+    const h = rows.length;
+    const lavaY = (t) => h + 1 - fluid.speed * Math.max(0, t - fluid.delay);
+    const best = new Map([[key(s[0], s[1]), 0]]);
+    const pq = [[0, s[0], s[1]]];
+    while (pq.length) {
+      pq.sort((a, b) => a[0] - b[0]);
+      const [t, x, y] = pq.shift();
+      if (t > best.get(key(x, y))) continue;
+      for (const [dx, dy] of DIRS) {
+        const r = slide(rows, x, y, dx, dy);
+        if (r.dead || !r.path.length) continue;
+        const nt = t + r.path.length / o.speed + o.react;
+        const lowest = Math.max(y, r.y); // linha mais baixa visitada neste movimento
+        const ly = lavaY(nt);
+        // enquanto a lava ainda está abaixo do chão (linha h-1) nada ameaça;
+        // depois disso o jogador precisa de 'margin' linhas de folga
+        if (ly < h - 0.5 && ly - (lowest + 1) < o.margin) continue;
+        if (r.exit) return { ok: true, time: nt, lavaAt: lavaY(nt) };
+        const k = key(r.x, r.y);
+        if (!best.has(k) || nt < best.get(k)) { best.set(k, nt); pq.push([nt, r.x, r.y]); }
+      }
+    }
+    return { ok: false };
+  }
+
   // Comprimento do raio de cada atirador (células até o primeiro sólido)
   function shooterRays(rows) {
     const out = [];
@@ -550,5 +581,5 @@
     return true;
   }
 
-  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, shooterRays, find, key, toGrid, toRows };
+  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, shooterRays, lavaFeasible, find, key, toGrid, toRows };
 });

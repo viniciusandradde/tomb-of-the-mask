@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## 1.8 — Linguagem gentil, lava no tempo e volume
+- Falas e textos sem bater/golpear: chefe é "encantado" ao encostar nele tonto; verificador de linguagem no CI.
+- Lava/água calibrada por simulação de tempo com reação de criança (fase 34 estava impossível); perseguição mais branda.
+- Volume inicial em 75%.
+
 ## 1.7.3 — Arenas sem bolsões
 - Regra nova do validador: no labirinto da arena, todas as paradas se alcançam mutuamente SEM passar pelo corredor do chefe. Antes, 8 das 9 arenas tinham bolsões (ex.: a coluna da direita na fase 20) cuja única saída era a faixa do chefe; todas regeneradas.
 

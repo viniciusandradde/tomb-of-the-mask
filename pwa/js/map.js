@@ -305,7 +305,7 @@
     hz.slice(0, 4).forEach(([type, n], i) => { const ix = tx + i * (is + 6 * small * 2.5); this.drawHazardIcon(type, ix, y, is); if (n) F.text(ctx, String(n), ix + is + 2, y + is / 2 - 3.5 * small, small, '#ffb0b0', 'left'); });
     y += is + 8;
     F.text(ctx, 'ALTURA ' + (L.rows.length - 2) + '   PAR ' + L.par + ' MOV', tx, y, small, '#888899', 'left'); y += lineH * 0.85;
-    if (L.boss) { F.text(ctx, 'NUCLEO AZUL = CHEFE TONTO', tx, y, small, '#8cf5ff', 'left'); y += lineH * 0.7; F.text(ctx, 'ENTAO BATA NELE!', tx, y, small, '#8cf5ff', 'left'); }
+    if (L.boss) { F.text(ctx, 'NUCLEO AZUL = CHEFE TONTO', tx, y, small, '#8cf5ff', 'left'); y += lineH * 0.7; F.text(ctx, 'ENTAO ENCOSTE NELE!', tx, y, small, '#8cf5ff', 'left'); }
     else if (L.fluid) F.text(ctx, L.fluid.type === 'lava' ? 'A LAVA SOBE: NAO PARE!' : 'A AGUA SOBE: NAO PARE!', tx, y, small, '#ff6a1a', 'left');
     const ready = Math.abs(this.tokenProg - this.sel) <= 0.2;
     // Pula-fase: só em fases ainda não concluídas (nunca chefes)

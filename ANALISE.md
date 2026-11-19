@@ -127,14 +127,14 @@ congelar pausa o ciclo. Legenda no mapa: `t`.
   amarela piscando), chuva de três tiros, raio vertical (coluna vermelha, o chefe para e treme, depois um feixe branco
   mortal por 0,6 s), espinhos temporários que brotam no labirinto (aviso de 0,9 s, ativos por 3 s), investida (o chefe
   mergulha pela coluna até a parede e volta), escuridão (5 s com luz só ao redor do jogador e do chefe) e invocação de
-  morcegos. Cada mundo usa um repertório diferente; o Mestre usa todos. Com metade da vida o chefe fica **furioso**:
+  morcegos. Cada mundo usa um repertório diferente; o Mestre usa todos. Com metade da magia o chefe fica **agitado**:
   mais rápido, ataques mais frequentes, cor pulsante.
-- **Derrota**: sequência de 3 s com explosões em cadeia, tremor, flash, "DERROTADO!", e então a porta abre e a música do
+- **Encantamento**: sequência de 3 s com explosões em cadeia, tremor, flash, "ENCANTADO!", e então a porta abre e a música do
   mundo volta.
 - **Chefão no fim de cada mundo** (fase 10): arena aberta com um corredor largo no topo onde o chefe patrulha. A saída
   fica trancada (cadeado) até ele cair. O chefe solta tiros que caem e invoca morcegos. Para feri-lo, pegue o **núcleo
-  azul** que aparece no labirinto: ele fica tonto por 6 s (olhos em X, piscando azul); deslize até ele para dar um golpe.
-  Encostar nele acordado mata. Vida de 3 a 5 golpes conforme o mundo. Derrotá-lo dá 1000 pontos e abre a porta.
+  azul** que aparece no labirinto: ele fica tonto por 6 s (olhos em X, piscando azul); deslize até ele para encostar e tirar
+  um pouco da magia dele. Encostar nele acordado perde. Magia de 3 a 5 toques conforme o mundo. Encantá-lo dá 1000 pontos e abre a porta.
 - **Chefão Mestre** (mundo 9, "Tumba do Mestre"): desbloqueia ao vencer o chefe do mundo 8. Vida 8, mais rápido, atira
   mais. Vencê-lo mostra "VOCÊ ZEROU!" com chuva de confete e marca o jogo como zerado no salvamento.
 - Todas as arenas passam pelo mesmo validador (saída e coletáveis alcançáveis, nenhuma parada sem volta).
@@ -229,6 +229,18 @@ Como no original, ao perder aparecem **dois botões grandes** ocupando a largura
 ↻) e **VOLTAR AO MAPA** (azul, ícone ⌂), com sombra e resposta visual ao toque. Toques e deslizes fora dos botões não fazem
 nada, evitando reinícios acidentais. No Modo Lúdico a tela diz "OPA!" com a causa em linguagem simples e uma frase de
 incentivo; se houver escudos no inventário, lembra que dois toques ligam o escudo.
+
+### 3.2.7 Linguagem sem violência e lava calibrada no tempo
+
+- Todas as falas e textos foram revisados: nada de "bater", "golpe", "acertou", "esmagou", "derrotado" ou "furioso".
+  A mecânica do chefe é contada como **encantamento**: o núcleo azul deixa o chefe tonto, você **encosta** nele para tirar
+  a magia dele e, quando a magia acaba, ele vai embora ("ENCANTADO!"). Perder vira "OPA!" / "OPA, PERDEU!". O verificador
+  `tools/lint-text.js` roda no CI e barra qualquer regressão.
+- **Lava/água calibrada no tempo**: `lavaFeasible` faz um Dijkstra sobre as paradas com 0,5 s de reação por movimento
+  e exige que o jogador fique sempre 2,5 linhas acima da lava até a saída. O gerador reduz a velocidade da lava de cada
+  fase até isso valer (a fase 34 estava inviável); atraso inicial de 3 s; a aceleração de "perseguição" só acontece se a
+  lava sumir bem da tela (1,6x, antes 2,5x).
+- O jogo começa com o volume em 75%.
 
 ### 3.3 Interface, visual e áudio
 

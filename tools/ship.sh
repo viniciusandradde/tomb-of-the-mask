@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 MSG="${1:?mensagem do commit}"
 for f in pwa/js/*.js pwa/sw.js server.js; do node --check "$f"; done
 node tools/validate.js
+node tools/lint-text.js
 SHOTS="${SHOTS:-/tmp/tumba-shots}" node tools/e2e.js > /tmp/tumba-e2e.log 2>&1 || { tail -30 /tmp/tumba-e2e.log; echo "E2E FALHOU: nada foi publicado"; exit 1; }
 grep -q "e2e ok" /tmp/tumba-e2e.log
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"

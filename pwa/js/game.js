@@ -428,7 +428,7 @@
       this.coreCands = cands;
       this.core = null;
       this.toastMsg('PEGUE O NUCLEO AZUL!');
-      if (this.kids()) this.speak('Cuidado, é o chefão! Pegue a bolinha azul para deixar ele tonto, depois bata nele!');
+      if (this.kids()) this.speak('Cuidado, é o chefão! Pegue a bolinha azul para deixar ele tonto, depois encoste nele para tirar a magia dele!');
     }
     spawnCore() {
       const p = this.player;
@@ -474,8 +474,8 @@
         if (p.cx === this.core.x && p.cy === this.core.y) {
           this.core = null; b.stun = 6; b.coreTimer = 1.2;
           this.audio.powerup(); this.burst(p.x, p.y, 16, '#8cf5ff', 3);
-          this.toastMsg('CHEFAO TONTO! BATA NELE!');
-          if (this.kids()) this.speak('Agora bate nele!');
+          this.toastMsg('CHEFAO TONTO! ENCOSTE NELE!');
+          if (this.kids()) this.speak('Agora encosta nele!');
         }
       } else if (!stunned) {
         b.coreTimer -= dt;
@@ -491,7 +491,7 @@
           this.audio.shieldHit(); this.burst(b.x, b.y, 30, this.world.color, 4); this.burst(b.x, b.y, 12, '#ffffff', 3);
           if (this.save.shake) this.shake = 0.3;
           if (b.hp <= 0) this.bossDefeated();
-          else { this.toastMsg(b.hp === 1 ? 'MAIS UM GOLPE!' : 'ACERTOU! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Mais um!' : 'Acertou!'); }
+          else { this.toastMsg(b.hp === 1 ? 'SO MAIS UM TOQUE!' : 'ENCANTOU! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Só mais um!' : 'Encantou!'); }
         } else if (!stunned && p.invul <= 0) this.die('chefao');
       }
     }
@@ -504,8 +504,8 @@
       if (this.save.shake) this.shake = 0.6;
       this.flash = 0.6;
       this.score += 1000;
-      this.toastMsg('CHEFAO DERROTADO! VA PARA A SAIDA!');
-      if (this.kids()) this.speak('Você venceu o chefão! Agora corre para a saída!');
+      this.toastMsg('CHEFAO ENCANTADO! VA PARA A SAIDA!');
+      if (this.kids()) this.speak('Você encantou o chefão! Agora corre para a saída!');
     }
     drawBoss(ox, oy) {
       const ctx = this.ctx, s = this.tile, b = this.boss;
@@ -732,7 +732,7 @@
           const accel = barrier ? 1 + Math.floor(this.arcadeChunks / 10) * 0.1 : 1;
           // se ficar fora da tela, acelera para voltar a ser visível
           const gap = this.fluid.y - p.y;
-          const chase = gap > this.viewRows() * 1.1 ? 2.5 : 1;
+          const chase = gap > this.viewRows() * 1.5 ? 1.6 : 1; // só se sumir bem da tela
           this.fluid.y -= this.fluid.speed * accel * chase * dt;
           if (gap < 4 && !this.fluid.warned) { this.fluid.warned = true; this.audio.lavaWarn(); }
           if (gap > 6) this.fluid.warned = false;
@@ -1418,10 +1418,10 @@
       if (this.t - this.deadAt < 0.4) return;
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
       const kids = this.kids();
-      F.text(this.ctx, kids ? 'OPA!' : 'VOCE MORREU', cx, cy - u * 20, u * 2, kids ? '#ffd23f' : '#ff3b3b', 'center', { shadow: kids ? '#7a3a00' : '#400' });
+      F.text(this.ctx, kids ? 'OPA!' : 'OPA, PERDEU!', cx, cy - u * 20, u * 2, kids ? '#ffd23f' : '#ff3b3b', 'center', { shadow: kids ? '#7a3a00' : '#400' });
       const causes = kids
-        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA TE ACERTOU', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU', chefao: 'O CHEFAO TE PEGOU! PEGUE O NUCLEO AZUL PRIMEIRO' }
-        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'ATINGIDO POR UMA FLECHA', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU', chefao: 'O CHEFAO TE ESMAGOU' };
+        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA ENCOSTOU EM VOCE', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU', chefao: 'O CHEFAO TE PEGOU! PEGUE O NUCLEO AZUL PRIMEIRO' }
+        : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'A FLECHA TE PEGOU', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU', chefao: 'O CHEFAO TE PEGOU' };
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
       if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
       const w = Math.min(this.W * 0.86, 360), bh = u * 7 + 44;
@@ -1436,7 +1436,7 @@
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
       const bossWin = !!this.level.boss;
       F.text(this.ctx, bossWin ? (this.level.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO ' + this.level.boss.name) : 'FASE ' + this.level.n, cx, cy - u * 44, Math.max(1, bossWin ? u - 1 : u), this.world.accent, 'center');
-      const title = bossWin ? (this.level.boss.master ? 'VOCE ZEROU!' : 'DERROTADO!') : (this.winTitle || 'COMPLETA!');
+      const title = bossWin ? (this.level.boss.master ? 'VOCE ZEROU!' : 'ENCANTADO!') : (this.winTitle || 'COMPLETA!');
       F.text(this.ctx, title, cx, cy - u * 32, u * 2, bossWin ? '#ffd23f' : '#ffffff', 'center', { shadow: this.world.color });
       // estrelas animadas
       for (let i = 0; i < 3; i++) {
@@ -1702,11 +1702,11 @@
       const hz = [];
       if (spikes) hz.push(spikes + ' ESPINHOS'); if (traps) hz.push(traps + ' ESPINHOS MOVEIS'); if (bats) hz.push(bats + ' MORCEGOS'); if (shots) hz.push(shots + ' FLECHAS');
       if (L.fluid) hz.push(L.fluid.type === 'lava' ? 'LAVA SOBE' : 'AGUA SOBE');
-      if (L.boss) hz.push('VIDA ' + L.boss.hp);
+      if (L.boss) hz.push('MAGIA ' + L.boss.hp);
       F.text(ctx, hz.length ? hz.slice(0, 2).join('  ') : 'SEM PERIGOS', tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8;
       if (hz.length > 2) { F.text(ctx, hz.slice(2).join('  '), tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8; }
       F.text(ctx, 'ALTURA ' + (L.rows.length - 2) + '  PAR ' + L.par + ' MOV', tx, y, small, '#888899', 'left'); y += lineH;
-      if (L.boss) F.text(ctx, 'PEGUE O NUCLEO AZUL E BATA NELE', tx, y, small, '#8cf5ff', 'left');
+      if (L.boss) F.text(ctx, 'PEGUE O NUCLEO AZUL E ENCOSTE NELE', tx, y, small, '#8cf5ff', 'left');
       this.drawButton(L.boss ? 'ENFRENTAR ▶' : 'JOGAR ▶', px + pw - u * 12 - 24, py + ph - (u * 7 + 20) / 2 - 8, u * 24 + 24, () => this.mapEnter(), wd.color, 'play');
     }
     renderSettings() {
