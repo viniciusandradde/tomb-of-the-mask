@@ -37,7 +37,7 @@
 | 6 | **Sem horário de uso.** O painel recomenda "nada na hora de dormir", mas não aplica | `wellbeing.js:277–279` | Janela configurável (padrão das 8h às 19h para o Modo Lúdico) e tela "Hora de descansar" com missão calma | Pendente |
 | 7 | **Sonequinha com vantagem no jogo** (+20% de congelar), ganha com missões de brincar | `items.js:28` | Deixar a Sonequinha só visual (sem bônus) | Aguardando decisão |
 | 8 | **Reduzir movimento** do sistema ignorado (CRT, tremor e confete continuam) | sem `prefers-reduced-motion` em `pwa/` | Ler `matchMedia('(prefers-reduced-motion: reduce)')` e desligar tremor, CRT e partículas por padrão | Pendente |
-| 9 | Lista do verificador de linguagem sem os termos de culpa e de família restrita | `tools/lint-text.js` | Acrescentar `castigo`, `desobedec`, `que feio`, `mam[ãa]e ou (o )?papai`, `papai ou a mam[ãa]e` e nomes de personagens licenciados |
+| 9 | Lista do verificador de linguagem sem os termos de culpa e de família restrita | `tools/lint-text.js` | Acrescentar `castigo`, `desobedec`, `que feio`, `mam[ãa]e ou (o )?papai`, `papai ou a mam[ãa]e` e nomes de personagens licenciados | Corrigido na 1.8.2 |
 
 ### Correção do item 1 (data local)
 
