@@ -20,8 +20,8 @@
 - Chegar à **saída** no topo. Coletar os pontos e as **3 moedas douradas** (= 3 estrelas).
 - Perigos: espinhos fixos, espinhos retráteis que saem dos blocos em ritmo (avisam antes), morcegos, flechas de armadilhas,
   lava/água que sobe (não pare!), e os chefões.
-- **Chefão:** pegue o **núcleo azul** para deixá-lo tonto (olhos em X) e deslize até ele para encostar e tirar um pouco da
-  magia dele. Encostar nele acordado perde. Quando a magia acaba ele vai embora e a saída destranca.
+- **Chefão:** pegue o **núcleo azul** para deixá-lo tonto (olhos em X) e leve a luz azul até ele, de levinho, para ele se
+  acalmar um pouco. Tocar nele acordado perde. Quando ele se acalma de vez, sorri, vai embora e a saída destranca.
 - Perdeu? Aparecem dois botões grandes: **JOGAR DE NOVO** (verde) e **VOLTAR AO MAPA** (azul). Toques fora deles não fazem nada.
 
 ## 4. Itens

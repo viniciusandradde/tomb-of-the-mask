@@ -40,7 +40,7 @@
       { id: 'janela', title: 'CACA NA JANELA', icon: 'sun', text: 'Olhos de aventureiro! Missão: vá até a janela e procure três coisas: um passarinho, uma árvore e uma nuvem. Toque na mão e vá!' },
       { id: 'guardar', title: 'GUARDAR O TESOURO', icon: 'blocks', text: 'Você guardou muitas estrelas. Missão: agora guarde cinco brinquedos no lugar certo, bem rápido, como um herói. Toque na mão e vá!' },
       { id: 'livro', title: 'LIVRO OU DANCA', icon: 'book', text: 'Que jogo bonito você fez! Missão: escolha um livro e peça para alguém ler com você. Ou coloque uma música e dance bem maluco! Toque na mão e vá!' },
-      { id: 'chefao', title: 'CHEFAO DE VERDADE', icon: 'bear', text: 'Você enfrentou chefões difíceis! Missão: finja que o seu quarto é a tumba. Pegue um brinquedo e vença um chefão de mentira. Depois volte. Toque na mão e vá!' },
+      { id: 'chefao', title: 'CHEFAO DE VERDADE', icon: 'bear', text: 'Você acalmou chefões difíceis! Missão: finja que o seu quarto é a tumba. Pegue um brinquedo e acalme um chefão de mentira, bem de levinho. Depois volte. Toque na mão e vá!' },
       { id: 'pelucia', title: 'AMIGO DA SELVA', icon: 'bear', text: 'Você explorou a selva inteira! Missão: ache um bichinho de pelúcia e leve ele para um passeio pela casa. Mostre o seu lugar favorito. Toque na mão e vá!' },
     ],
     accept: [
