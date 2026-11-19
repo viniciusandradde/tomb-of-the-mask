@@ -428,7 +428,7 @@
       this.coreCands = cands;
       this.core = null;
       this.toastMsg('PEGUE O NUCLEO AZUL!');
-      if (this.kids()) this.speak('Cuidado, é o chefão! Pegue a bolinha azul para deixar ele tonto, depois encoste nele para tirar a magia dele!');
+      if (this.kids()) this.speak('Cuidado, é o chefão! Pegue a luz azul para deixar ele tonto, depois leve a luz até ele, bem de levinho, para ele se acalmar!');
     }
     spawnCore() {
       const p = this.player;
@@ -474,8 +474,8 @@
         if (p.cx === this.core.x && p.cy === this.core.y) {
           this.core = null; b.stun = 6; b.coreTimer = 1.2;
           this.audio.powerup(); this.burst(p.x, p.y, 16, '#8cf5ff', 3);
-          this.toastMsg('CHEFAO TONTO! ENCOSTE NELE!');
-          if (this.kids()) this.speak('Agora encosta nele!');
+          this.toastMsg('CHEFAO TONTO! LEVE A LUZ ATE ELE!');
+          if (this.kids()) this.speak('Agora leve a luz até ele, de levinho!');
         }
       } else if (!stunned) {
         b.coreTimer -= dt;
@@ -491,7 +491,7 @@
           this.audio.shieldHit(); this.burst(b.x, b.y, 30, this.world.color, 4); this.burst(b.x, b.y, 12, '#ffffff', 3);
           if (this.save.shake) this.shake = 0.3;
           if (b.hp <= 0) this.bossDefeated();
-          else { this.toastMsg(b.hp === 1 ? 'SO MAIS UM TOQUE!' : 'ENCANTOU! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Só mais um!' : 'Encantou!'); }
+          else { this.toastMsg(b.hp === 1 ? 'QUASE CALMO!' : 'ACALMOU UM POUCO! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Quase lá!' : 'Ele está se acalmando!'); }
         } else if (!stunned && p.invul <= 0) this.die('chefao');
       }
     }
@@ -504,8 +504,8 @@
       if (this.save.shake) this.shake = 0.6;
       this.flash = 0.6;
       this.score += 1000;
-      this.toastMsg('CHEFAO ENCANTADO! VA PARA A SAIDA!');
-      if (this.kids()) this.speak('Você encantou o chefão! Agora corre para a saída!');
+      this.toastMsg('O CHEFAO SE ACALMOU! VA PARA A SAIDA!');
+      if (this.kids()) this.speak('Você acalmou o chefão! Agora corre para a saída!');
     }
     drawBoss(ox, oy) {
       const ctx = this.ctx, s = this.tile, b = this.boss;
@@ -1436,7 +1436,7 @@
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
       const bossWin = !!this.level.boss;
       F.text(this.ctx, bossWin ? (this.level.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO ' + this.level.boss.name) : 'FASE ' + this.level.n, cx, cy - u * 44, Math.max(1, bossWin ? u - 1 : u), this.world.accent, 'center');
-      const title = bossWin ? (this.level.boss.master ? 'VOCE ZEROU!' : 'ENCANTADO!') : (this.winTitle || 'COMPLETA!');
+      const title = bossWin ? (this.level.boss.master ? 'VOCE ZEROU!' : 'ELE SE ACALMOU!') : (this.winTitle || 'COMPLETA!');
       F.text(this.ctx, title, cx, cy - u * 32, u * 2, bossWin ? '#ffd23f' : '#ffffff', 'center', { shadow: this.world.color });
       // estrelas animadas
       for (let i = 0; i < 3; i++) {
@@ -1702,12 +1702,12 @@
       const hz = [];
       if (spikes) hz.push(spikes + ' ESPINHOS'); if (traps) hz.push(traps + ' ESPINHOS MOVEIS'); if (bats) hz.push(bats + ' MORCEGOS'); if (shots) hz.push(shots + ' FLECHAS');
       if (L.fluid) hz.push(L.fluid.type === 'lava' ? 'LAVA SOBE' : 'AGUA SOBE');
-      if (L.boss) hz.push('MAGIA ' + L.boss.hp);
+      if (L.boss) hz.push('AGITACAO ' + L.boss.hp);
       F.text(ctx, hz.length ? hz.slice(0, 2).join('  ') : 'SEM PERIGOS', tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8;
       if (hz.length > 2) { F.text(ctx, hz.slice(2).join('  '), tx, y, small, '#ffb0b0', 'left'); y += lineH * 0.8; }
       F.text(ctx, 'ALTURA ' + (L.rows.length - 2) + '  PAR ' + L.par + ' MOV', tx, y, small, '#888899', 'left'); y += lineH;
-      if (L.boss) F.text(ctx, 'PEGUE O NUCLEO AZUL E ENCOSTE NELE', tx, y, small, '#8cf5ff', 'left');
-      this.drawButton(L.boss ? 'ENFRENTAR ▶' : 'JOGAR ▶', px + pw - u * 12 - 24, py + ph - (u * 7 + 20) / 2 - 8, u * 24 + 24, () => this.mapEnter(), wd.color, 'play');
+      if (L.boss) F.text(ctx, 'PEGUE A LUZ AZUL E LEVE ATE O CHEFAO', tx, y, small, '#8cf5ff', 'left');
+      this.drawButton(L.boss ? 'ENTRAR ▶' : 'JOGAR ▶', px + pw - u * 12 - 24, py + ph - (u * 7 + 20) / 2 - 8, u * 24 + 24, () => this.mapEnter(), wd.color, 'play');
     }
     renderSettings() {
       const ctx = this.ctx, u = this.ui, cx = this.W / 2;

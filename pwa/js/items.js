@@ -190,7 +190,7 @@
       F.text(ctx, tag, x + w - 10, y + h / 2 - u * 3.5, u, col, 'right');
       if (!this.buttons.find((b) => b.id === 'm' + m.id)) this.buttons.push({ id: 'm' + m.id, x, y, w, h, fn: () => {
         if (owned) { this.save.mask = m.id; this.saveNow(); this.buttons = []; this.sprites = {}; return; }
-        if (!unlocked) { this.audio.bump(); this.toastMsg(m.zerou ? 'ENCANTE O CHEFAO MESTRE' : m.stickers ? 'CUMPRA ' + m.stickers + ' MISSOES DE BRINCAR' : 'CHEGUE A FASE ' + m.level); return; }
+        if (!unlocked) { this.audio.bump(); this.toastMsg(m.zerou ? 'ACALME O CHEFAO MESTRE' : m.stickers ? 'CUMPRA ' + m.stickers + ' MISSOES DE BRINCAR' : 'CHEGUE A FASE ' + m.level); return; }
         if (this.save.coins >= m.cost) { this.save.coins -= m.cost; this.save.masks.push(m.id); this.save.mask = m.id; this.saveNow(); this.audio.buy(); this.buttons = []; this.sprites = {}; this.toastMsg('NOVA MASCARA!'); if (this.kids()) this.speak('Máscara nova!'); }
         else { this.audio.bump(); this.toastMsg('FALTAM $' + (m.cost - this.save.coins)); }
       } });
