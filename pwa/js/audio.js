@@ -15,7 +15,7 @@
       this.musicGain = null;
       this.sfxOn = true;
       this.musicOn = true;
-      this.volume = 0.8;
+      this.volume = 0.75; // começa em 75% do volume
       this.music = null; // estado do sequenciador
       this.comboPitch = 0;
       this.lastDot = 0;

@@ -58,7 +58,7 @@ function fluidFor(w, i) {
   if (w === 3 && i < 2) return null; // primeiras fases do vulcão sem lava
   // velocidade em células por segundo; atraso em segundos antes de começar a subir
   const speed = +(0.9 + w * 0.18 + (i / 9) * 0.7).toFixed(2);
-  return { type: world.fluid, speed, delay: +Math.max(1.5, 2.5 - w * 0.12).toFixed(2) };
+  return { type: world.fluid, speed, delay: 3 };
 }
 
 const levels = [];
@@ -67,7 +67,7 @@ for (let w = 0; w < WORLDS.length; w++) {
   const count = WORLDS[w].master ? 1 : 10;
   for (let i = 0; i < count; i++) {
     const n = w * 10 + i + 1;
-    let rows, moves;
+    let rows, moves, calibratedFluid = null;
     const isBoss = WORLDS[w].master || i === 9;
     if (isBoss) {
       const boss = WORLDS[w].master ? MASTER : BOSSES[w];
@@ -83,15 +83,35 @@ for (let w = 0; w < WORLDS.length; w++) {
       // Fase 1 é um tutorial: sem perigos, poucas paredes.
       const p = n === 1 ? { h: 14, wallDensity: 0.2, spikes: 0, bats: 0, coins: 3, minMoves: 5, maxMoves: 14 } : params(w, i);
       let result = null, seed = seedBase + n * 7919;
+      const want = fluidFor(w, i);
+      const calibrate = (rws) => { // velocidade máxima de lava que uma criança consegue vencer neste layout
+        if (!want) return null; let f = { ...want }, g2 = 0;
+        while (!Maze.lavaFeasible(rws, f, { react: 0.5, margin: 2.5 }).ok && g2++ < 40) f = { ...f, speed: +(f.speed * 0.92).toFixed(2) };
+        return g2 >= 40 ? null : f;
+      };
       for (let round = 0; round < 6 && !result; round++) {
         const q = Object.assign({}, p);
         if (round > 0) for (const k of ['spikes', 'traps', 'bats', 'vbats', 'shooters']) q[k] = Math.round(p[k] * (1 - round * 0.12));
-        for (let k = 0; k < 20 && !result; k++, seed += 13) result = Maze.generate(Object.assign({ seed }, q), Maze.rng(seed));
+        let best = null;
+        for (let k = 0; k < 20 && !result; k++, seed += 13) {
+          const cand = Maze.generate(Object.assign({ seed }, q), Maze.rng(seed));
+          if (!cand) continue;
+          if (!want) { result = cand; break; }
+          const f = calibrate(cand.rows);
+          if (!f) continue;
+          cand.fluid = f;
+          // aceita se a lava fica em pelo menos 60% da velocidade prevista; senão guarda o melhor e tenta outra semente
+          if (f.speed >= want.speed * 0.6) { result = cand; break; }
+          if (!best || f.speed > best.fluid.speed) best = cand;
+        }
+        if (!result && best) result = best;
       }
       if (!result) throw new Error('Não consegui gerar a fase ' + n);
       rows = result.rows; moves = result.moves;
+      if (result.fluid) calibratedFluid = result.fluid;
     }
-    levels.push({ n, world: w, rows, par: moves, fluid: fluidFor(w, i) });
+    const fluid = calibratedFluid || null;
+    levels.push({ n, world: w, rows, par: moves, fluid });
     process.stdout.write(`fase ${String(n).padStart(2)} mundo ${w + 1} ${rows.length}x${rows[0].length} par=${moves}\n`);
   }
 }

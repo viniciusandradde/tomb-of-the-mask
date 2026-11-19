@@ -20,14 +20,14 @@
 - Chegar à **saída** no topo. Coletar os pontos e as **3 moedas douradas** (= 3 estrelas).
 - Perigos: espinhos fixos, espinhos retráteis que saem dos blocos em ritmo (avisam antes), morcegos, flechas de armadilhas,
   lava/água que sobe (não pare!), e os chefões.
-- **Chefão:** pegue o **núcleo azul** para deixá-lo tonto (olhos em X) e deslize até ele para dar um golpe. Encostar nele
-  acordado perde. A saída fica trancada até derrotá-lo.
+- **Chefão:** pegue o **núcleo azul** para deixá-lo tonto (olhos em X) e deslize até ele para encostar e tirar um pouco da
+  magia dele. Encostar nele acordado perde. Quando a magia acaba ele vai embora e a saída destranca.
 - Perdeu? Aparecem dois botões grandes: **JOGAR DE NOVO** (verde) e **VOLTAR AO MAPA** (azul). Toques fora deles não fazem nada.
 
 ## 4. Itens
 - **Power-ups** (aparecem nas fases a partir do mundo 2 e no Arcade): Ímã, Congelar, Viciado em Moedas (pontos viram moedas
   douradas) e Multiplicador (pontos x2/x3). Barra de duração no rodapé.
-- **Escudo:** protege de um golpe. Você começa com 1; compre mais na Loja (60 moedas) ou ganhe em baús. Ative com **toque
+- **Escudo:** protege de um susto. Você começa com 1; compre mais na Loja (60 moedas) ou ganhe em baús. Ative com **toque
   duplo** na tela ou no contador no canto inferior esquerdo.
 - **Loja** (tela inicial): abas Máscaras (14, com bônus percentuais e imunidades; desbloqueiam por fase alcançada),
   Poderes (melhore a duração em 3 níveis) e Itens (escudos, Pula-fase).

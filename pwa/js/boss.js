@@ -26,7 +26,7 @@
     ['rain', 'beam', 'slam', 'spikes'],
   ];
   const MASTER_ATTACKS = ['shots', 'beam', 'rain', 'spikes', 'slam', 'bats', 'dark'];
-  const ATTACK_NAMES = { shots: 'TIRO', bats: 'MORCEGOS', beam: 'RAIO', rain: 'CHUVA', spikes: 'ESPINHOS', slam: 'INVESTIDA', dark: 'ESCURIDAO' };
+  const ATTACK_NAMES = { shots: 'FLECHA', bats: 'MORCEGOS', beam: 'RAIO', rain: 'CHUVA', spikes: 'ESPINHOS', slam: 'MERGULHO', dark: 'ESCURIDAO' };
 
   G.setupBoss = function (def) {
     const rows = this.level.rows;
@@ -53,7 +53,7 @@
     this.state = 'bossintro'; this.buttons = [];
     this.cine = { t: 0, dur: 3.4, kind: 'intro', roared: false };
     this.audio.stopMusic();
-    if (this.kids()) this.speak('Cuidado, é o chefão ' + this.boss.name.toLowerCase() + '! Pegue a bolinha azul para deixar ele tonto, depois bata nele!');
+    if (this.kids()) this.speak('Cuidado, é o chefão ' + this.boss.name.toLowerCase() + '! Pegue a bolinha azul para deixar ele tonto, depois encoste nele para tirar a magia dele!');
   };
   G.skipBossIntro = function () { if (this.state === 'bossintro') this.endBossIntro(); };
   G.endBossIntro = function () {
@@ -94,7 +94,7 @@
         this.state = 'play'; this.buttons = []; this.lastFrame = performance.now() / 1000; this.cine = null;
         this.audio.startMusic(this.world.music);
         this.toastMsg('A PORTA ABRIU! VA PARA A SAIDA!');
-        if (this.kids()) this.speak('Você venceu o chefão! Agora corre para a saída!');
+        if (this.kids()) this.speak('Você encantou o chefão! Agora corre para a saída!');
       }
     }
   };
@@ -115,14 +115,14 @@
         F.text(ctx, b.master ? 'CHEFAO MESTRE' : 'CHEFAO DO MUNDO', W / 2, H * 0.4 + u * 3, Math.max(1, u - 1), '#ffd23f', 'center');
         F.text(ctx, b.name, W / 2 - (1 - k) * W, H * 0.4 + u * 11, Math.min(u * 2, Math.floor((W - 20) / (b.name.length * 6))), '#ffffff', 'center', { shadow: '#000' });
         const atk = b.attacks.map((a) => ATTACK_NAMES[a]).join(' ');
-        F.text(ctx, 'VIDA ' + b.maxHp + '   ' + atk, W / 2, H * 0.4 + u * 20, Math.max(1, u - 1), '#ffb0b0', 'center');
+        F.text(ctx, 'MAGIA ' + b.maxHp + '   ' + atk, W / 2, H * 0.4 + u * 20, Math.max(1, u - 1), '#ffb0b0', 'center');
       }
       F.text(ctx, 'TOQUE PARA PULAR', W / 2, H - band / 2 - u * 3.5, Math.max(1, u - 1), '#888899', 'center');
     } else {
       if (c.t > 1.7) {
         const k = clamp((c.t - 1.7) / 0.3, 0, 1);
         ctx.fillStyle = rgba('#ffd23f', 0.3); ctx.fillRect(0, H * 0.42, W, u * 16);
-        F.text(ctx, b.master ? 'VOCE ZEROU!' : 'DERROTADO!', W / 2, H * 0.42 + u * 4 - (1 - k) * 40, u * 2, '#ffffff', 'center', { shadow: '#7a3a00' });
+        F.text(ctx, b.master ? 'VOCE ZEROU!' : 'ENCANTADO!', W / 2, H * 0.42 + u * 4 - (1 - k) * 40, u * 2, '#ffffff', 'center', { shadow: '#7a3a00' });
       }
     }
   };
@@ -156,7 +156,7 @@
     if (stunned) { b.stun -= dt; if (b.stun <= 0) { b.stun = 0; this.toastMsg('ELE ACORDOU!'); } }
     const frozen = p.freeze > 0;
     const hpFrac = b.hp / b.maxHp;
-    if (!b.enraged && hpFrac <= 0.5) { b.enraged = true; this.toastMsg('ELE FICOU FURIOSO!'); this.bossRoar(); }
+    if (!b.enraged && hpFrac <= 0.5) { b.enraged = true; this.toastMsg('ELE FICOU AGITADO!'); this.bossRoar(); }
     // investida (slam): desce pela coluna e volta
     if (b.slam) {
       const sl = b.slam; sl.t += dt;
@@ -211,8 +211,8 @@
       if (p.cx === this.core.x && p.cy === this.core.y) {
         this.core = null; b.stun = 6; b.coreTimer = 1.2; b.pending = null;
         this.audio.powerup(); this.burst(p.x, p.y, 16, '#8cf5ff', 3);
-        this.toastMsg('CHEFAO TONTO! BATA NELE!');
-        if (this.kids()) this.speak('Agora bate nele!');
+        this.toastMsg('CHEFAO TONTO! ENCOSTE NELE!');
+        if (this.kids()) this.speak('Agora encosta nele!');
       }
     } else if (!stunned) { b.coreTimer -= dt; if (b.coreTimer <= 0) this.spawnCore(); }
     // contato
@@ -240,7 +240,7 @@
         if (this.save.shake) this.shake = 0.3;
         this.score += 250;
         if (b.hp <= 0) this.bossDefeated();
-        else { this.toastMsg(b.hp === 1 ? 'MAIS UM GOLPE!' : 'ACERTOU! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Mais um!' : 'Acertou!'); }
+        else { this.toastMsg(b.hp === 1 ? 'SO MAIS UM TOQUE!' : 'ENCANTOU! FALTAM ' + b.hp); if (this.kids()) this.speak(b.hp === 1 ? 'Só mais um!' : 'Encantou!'); }
       } else if (!stunned && p.invul <= 0) this.die('chefao');
     }
   };
@@ -401,12 +401,12 @@
     const y = this.H - (u * 7 + 18) - 14 - u * 8;
     const w = Math.min(this.W * 0.7, 300), x = this.W / 2 - w / 2;
     ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(x - 6, y - 4, w + 12, u * 7 + 18);
-    F.text(ctx, b.name + (b.enraged ? '  FURIOSO' : ''), this.W / 2, y, Math.max(1, u - 1), b.enraged ? '#ffd23f' : (b.master ? '#ffffff' : this.world.accent), 'center');
+    F.text(ctx, b.name + (b.enraged ? '  AGITADO' : ''), this.W / 2, y, Math.max(1, u - 1), b.enraged ? '#ffd23f' : (b.master ? '#ffffff' : this.world.accent), 'center');
     const by = y + u * 7 + 2, bh = 8;
     ctx.fillStyle = '#331111'; ctx.fillRect(x, by, w, bh);
     const seg = w / b.maxHp;
     for (let i = 0; i < b.hp; i++) { ctx.fillStyle = b.stun > 0 ? '#8cf5ff' : (b.enraged ? '#ffd23f' : '#ff3b3b'); ctx.fillRect(x + i * seg + 1, by + 1, seg - 2, bh - 2); }
-    if (b.stun > 0) F.text(ctx, 'TONTO ' + Math.ceil(b.stun) + '  BATA NELE!', this.W / 2, by + bh + 4, Math.max(1, u - 1), '#8cf5ff', 'center');
+    if (b.stun > 0) F.text(ctx, 'TONTO ' + Math.ceil(b.stun) + '  ENCOSTE NELE!', this.W / 2, by + bh + 4, Math.max(1, u - 1), '#8cf5ff', 'center');
     else if (b.pending) F.text(ctx, '! ' + ATTACK_NAMES[b.pending.type] + ' !', this.W / 2, by + bh + 4, Math.max(1, u - 1), '#ff3b3b', 'center');
   };
 
