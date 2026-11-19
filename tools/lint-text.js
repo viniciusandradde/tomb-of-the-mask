@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Garante que nenhum texto/fala do jogo use linguagem de bater, golpear ou violência.
+// Garante que nenhum texto/fala do jogo use linguagem de bater, golpear, violência, culpa, família restrita ou marcas licenciadas
+// (Padrão VSA de Bem-Estar Digital Infantil, docs/standards/CHILD-WELLBEING-STANDARD.md).
 const fs = require('fs'), path = require('path');
-const FORBIDDEN = /bat[ae] nele|bater nele|golpe|acertou|esmag|derrotad|furios|atingid|encost[ea] nele|enfrent|venc[ae]r? o chef|encante o chef|\bmatar\b|\bmorreu\b|\bviol[eê]n/i;
+const FORBIDDEN = /bat[ae] nele|bater nele|golpe|acertou|esmag|derrotad|furios|atingid|encost[ea] nele|enfrent|venc[ae]r? o chef|encante o chef|\bmatar\b|\bmorreu\b|\bviol[eê]n|castigo|desobedec|que feio|mam[ãa]e ou (o )?papai|papai ou (a )?mam[ãa]e|homem de ferro|capit[ãa]o am[ée]rica|homem-aranha|batman|superman/i;
 let bad = 0;
 for (const f of fs.readdirSync(path.join(__dirname, '..', 'pwa', 'js'))) {
   if (!f.endsWith('.js') || f === 'levels.js') continue;

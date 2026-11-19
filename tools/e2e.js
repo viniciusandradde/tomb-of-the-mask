@@ -181,7 +181,7 @@ const { spawn } = require('child_process');
     const resumed = game.state;
     // portão parental
     game.wbOpenGate(() => { game.state = 'parent'; game.buttons = []; });
-    const q = game.gate.a * game.gate.b; game.gate.answer = String(q);
+    const q = game.gate.a + game.gate.b; game.gate.answer = String(q);
     const okBtn = { fn: null }; game.renderGate(); const b = game.buttons.find((x) => x.id === 'k11'); b.fn();
     const parent = game.state;
     // segundo ciclo do dia termina em "até amanhã"

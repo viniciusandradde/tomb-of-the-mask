@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 1.8.2 — Padrão VSA de Bem-Estar Digital
+- "Aventuras por dia" passa a zerar à meia-noite do horário local (antes virava em UTC e, no Brasil, liberava novas aventuras às 21h).
+- Portão dos pais com soma de dois dígitos no lugar da tabuada simples.
+- Missões sem personagens licenciados ("herói voador", "escudo do herói") e falas com "um adulto" no lugar de "mamãe ou papai".
+- Verificador de linguagem barra também culpa, família restrita e nomes de personagens licenciados.
+- Documentos do padrão: `docs/standards/CHILD-WELLBEING-STANDARD.md` e `docs/ADOCAO-PADRAO-BEM-ESTAR.md`.
+
 ## 1.8 — Linguagem gentil, lava no tempo e volume
 - Falas e textos sem bater/golpear: chefe é "encantado" ao encostar nele tonto; verificador de linguagem no CI.
 - Lava/água calibrada por simulação de tempo com reação de criança (fase 34 estava impossível); perseguição mais branda.
