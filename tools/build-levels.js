@@ -1,20 +1,37 @@
 #!/usr/bin/env node
-// Gera pwa/js/levels.js: 8 mundos x 10 fases, todas validadas pelo solver.
+// Gera pwa/js/levels.js: 8 mundos x 12 fases (chefão a cada 3: três chefinhos e o chefão do mundo),
+// mais a Tumba do Mestre. Todas validadas pelo solver.
 const fs = require('fs');
 const path = require('path');
 const Maze = require('../pwa/js/maze.js');
 
+// Chefão do mundo (o "comum", última fase do mundo). A partir do Abismo ficou mais brando.
 const BOSSES = [
-  { name: 'GUARDIAO DA CATACUMBA', hp: 3, speed: 2.2, shot: 2.6, bats: 7, size: 3 },
-  { name: 'ESPECTRO DA CRIPTA', hp: 3, speed: 2.5, shot: 2.4, bats: 6.5, size: 3 },
-  { name: 'TOTEM DA SELVA', hp: 4, speed: 2.6, shot: 2.3, bats: 6, size: 3 },
-  { name: 'SENHOR DO MAGMA', hp: 4, speed: 2.8, shot: 2.1, bats: 6, size: 3 },
-  { name: 'KRAKEN DO ABISMO', hp: 5, speed: 3.0, shot: 2.0, bats: 5.5, size: 3 },
-  { name: 'FARAO DOURADO', hp: 5, speed: 3.1, shot: 1.9, bats: 5.5, size: 3 },
-  { name: 'REI DAS SOMBRAS', hp: 6, speed: 3.5, shot: 1.6, bats: 5, size: 3 },
-  { name: 'CORACAO DO NUCLEO', hp: 7, speed: 3.8, shot: 1.4, bats: 5, size: 3 },
+  { name: 'GUARDIAO DA CATACUMBA', short: 'GUARDIAO', hp: 3, speed: 2.2, shot: 2.6, bats: 7, size: 3 },
+  { name: 'ESPECTRO DA CRIPTA', short: 'ESPECTRO', hp: 3, speed: 2.5, shot: 2.4, bats: 6.5, size: 3 },
+  { name: 'TOTEM DA SELVA', short: 'TOTEM', hp: 4, speed: 2.6, shot: 2.3, bats: 6, size: 3 },
+  { name: 'SENHOR DO MAGMA', short: 'MAGMA', hp: 4, speed: 2.8, shot: 2.1, bats: 6, size: 3 },
+  { name: 'KRAKEN DO ABISMO', short: 'KRAKEN', hp: 4, speed: 2.6, shot: 2.4, bats: 6.5, size: 3 },
+  { name: 'FARAO DOURADO', short: 'FARAO', hp: 4, speed: 2.7, shot: 2.3, bats: 6.5, size: 3 },
+  { name: 'REI DAS SOMBRAS', short: 'SOMBRA', hp: 5, speed: 2.9, shot: 2.1, bats: 6, size: 3 },
+  { name: 'CORACAO DO NUCLEO', short: 'NUCLEO', hp: 5, speed: 3.0, shot: 2.0, bats: 6, size: 3 },
 ];
-const MASTER = { name: 'MASCARA MESTRE', hp: 10, speed: 4.2, shot: 1.2, bats: 4, size: 3, master: true };
+const MASTER = { name: 'MASCARA MESTRE', hp: 7, speed: 3.3, shot: 1.8, bats: 5, size: 3, master: true };
+// Chefinhos: do básico (fase 3) ao mais forte (fase 9); a fase 12 é o chefão do mundo.
+const TIERS = [
+  { suffix: 'BEBE', hp: 2, speed: 0.65, slow: 1.7, attacks: 1 },
+  { suffix: 'PEQUENO', hp: 2, speed: 0.75, slow: 1.45, attacks: 2 },
+  { suffix: 'GRANDE', hp: 3, speed: 0.85, slow: 1.25, attacks: 3 },
+];
+function bossFor(w, i) {
+  const base = BOSSES[w], tier = (i + 1) / 3; // 1..4
+  if (tier === 4) return Object.assign({}, base, { tier: 4 });
+  const T = TIERS[tier - 1];
+  return { name: base.short + ' ' + T.suffix, hp: T.hp, speed: +(base.speed * T.speed).toFixed(2), shot: +(base.shot * T.slow).toFixed(2), bats: +(base.bats * T.slow).toFixed(2), size: 3, tier, attacks: T.attacks };
+}
+const PER_WORLD = 12;
+// Dificuldade efetiva do mundo: cresce normal até o Vulcão e bem mais devagar a partir do Abismo.
+const eff = (w) => (w <= 3 ? w : 3 + (w - 3) * 0.45);
 
 const WORLDS = [
   { id: 'catacumba', name: 'CATACUMBA', color: '#c065d8', dark: '#4a1f58', accent: '#f0a8ff', music: 0 },
@@ -29,16 +46,16 @@ const WORLDS = [
 ];
 
 // Parâmetros de dificuldade por mundo/fase.
-function params(w, i) {
-  const t = i / 9; // 0..1 dentro do mundo
+function params(wr, i) {
+  const w = eff(wr), t = i / (PER_WORLD - 1); // 0..1 dentro do mundo
   const base = {
     h: Math.round(16 + w * 2.5 + t * 10),
     wallDensity: 0.2 + w * 0.015 + t * 0.04,
     spikes: Math.round(w * 1.6 + t * 4 + (w > 0 ? 1 : 0)),
     coins: 3,
-    bats: w >= 1 ? Math.min(6, Math.round(0.5 + w * 0.6 + t * 2)) : (i >= 6 ? 1 : 0),
-    vbats: w >= 2 ? Math.round(w * 0.5 + t * 1.5) : 0,
-    shooters: w >= 2 ? Math.min(6, Math.round((w - 1) * 0.8 + t * 2.5)) : 0,
+    bats: w >= 1 ? Math.min(w > 3 ? 3 : 5, Math.round(0.5 + w * 0.55 + t * 1.5)) : (i >= 6 ? 1 : 0), // do Abismo em diante, no máximo 3
+    vbats: w >= 2 ? Math.min(w > 3 ? 1 : 2, Math.round(w * 0.3 + t)) : 0,
+    shooters: w >= 2 ? Math.min(5, Math.round((w - 1) * 0.7 + t * 2)) : 0,
     traps: w >= 1 ? Math.min(7, Math.round(0.5 + w * 0.8 + t * 2.5)) : (i >= 5 ? 1 : 0),
     shields: (i % 3 === 2 && w >= 1) ? 1 : 0,
     freezes: (w >= 3 && i % 4 === 1) ? 1 : 0,
@@ -56,22 +73,23 @@ function fluidFor(w, i) {
   const world = WORLDS[w];
   if (!world.fluid) return null;
   if (w === 3 && i < 2) return null; // primeiras fases do vulcão sem lava
-  // velocidade em células por segundo; atraso em segundos antes de começar a subir
-  const speed = +(0.9 + w * 0.18 + (i / 9) * 0.7).toFixed(2);
-  return { type: world.fluid, speed, delay: 3 };
+  // velocidade em células por segundo (bem lenta, para a criança pensar sem angústia); atraso antes de subir
+  const speed = +(0.4 + eff(w) * 0.07 + (i / (PER_WORLD - 1)) * 0.25).toFixed(2);
+  return { type: world.fluid, speed, delay: 5 };
 }
 
 const levels = [];
 let seedBase = 20260101;
 for (let w = 0; w < WORLDS.length; w++) {
-  const count = WORLDS[w].master ? 1 : 10;
+  const count = WORLDS[w].master ? 1 : PER_WORLD;
   for (let i = 0; i < count; i++) {
-    const n = w * 10 + i + 1;
+    const n = w * PER_WORLD + i + 1;
     let rows, moves, calibratedFluid = null;
-    const isBoss = WORLDS[w].master || i === 9;
+    const isBoss = WORLDS[w].master || i % 3 === 2;
     if (isBoss) {
-      const boss = WORLDS[w].master ? MASTER : BOSSES[w];
-      const p = { h: 16 + Math.min(w, 4), wallDensity: 0.12 + w * 0.006, spikes: Math.min(4, 1 + Math.floor(w / 2)), traps: 1 + Math.floor(w / 3), coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
+      const boss = WORLDS[w].master ? MASTER : bossFor(w, i);
+      const ew = Math.round(eff(w)), small = boss.tier && boss.tier < 4;
+      const p = { h: 16 + Math.min(ew, 4), wallDensity: 0.12 + ew * 0.006, spikes: small ? Math.min(2, Math.floor(ew / 2)) : Math.min(4, 1 + Math.floor(ew / 2)), traps: small ? Math.floor(ew / 3) : 1 + Math.floor(ew / 3), coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
       let result = null, seed = seedBase + n * 7919 + 500;
       for (let k = 0; k < 30 && !result; k++, seed += 17) result = Maze.generateArena(Object.assign({ seed }, p), Maze.rng(seed));
       if (!result) throw new Error('Não consegui gerar a arena ' + n);

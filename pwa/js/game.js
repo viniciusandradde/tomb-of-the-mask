@@ -33,9 +33,9 @@
     dust: 7,           // partículas de poeira por batida
     dustSpeed: 3.5,    // células/s da poeira
   };
-  const BAT_SPEED = 3.2;    // células por segundo
-  const SHOT_SPEED = 9;
-  const SHOT_PERIOD = 2.2;
+  const BAT_SPEED = 2.2;    // células por segundo (mais lento: dá tempo de a criança ver e decidir)
+  const SHOT_SPEED = 5.5;   // flechas mais lentas, visíveis no caminho
+  const SHOT_PERIOD = 2.8;
   const COLS = 12;
   // Modo lúdico (para crianças): só muda a forma de comunicar, nunca a dificuldade.
   const ELOGIOS = ['Muito bem!', 'Você conseguiu!', 'Incrível!', 'Que demais!', 'Parabéns, campeão!', 'Uau, mandou bem!'];
@@ -61,6 +61,14 @@
       this.data.inv = Object.assign({ shield: 1, skip: 0 }, this.data.inv || {});
       this.data.up = Object.assign({ magnet: 0, freeze: 0, addict: 0, boost: 0 }, this.data.up || {});
       this.data.chests = this.data.chests || {};
+      // migração 10 -> 12 fases por mundo (chefão a cada 3 fases): remapeia progresso, estrelas e baús
+      if (this.data.layout !== 12) {
+        const PER = 12, mapIdx = (k) => { k = +k; const w = Math.floor(k / 10), i = k % 10; return w >= 8 ? 8 * PER : w * PER + [0, 1, 3, 4, 6, 7, 9, 10, 10, 11][i]; };
+        const remap = (obj) => { const out = {}; for (const k of Object.keys(obj || {})) { const n = mapIdx(k); out[n] = Math.max(out[n] || 0, obj[k]); } return out; };
+        if (this.data.unlocked > 1) { const done = this.data.unlocked - 1; const w = Math.floor(done / 10), i = done % 10; this.data.unlocked = 1 + (w >= 8 ? 8 * PER + Math.min(1, done - 80) : w * PER + Math.round(i * PER / 10)); }
+        this.data.stars = remap(this.data.stars); this.data.best = remap(this.data.best); this.data.chests = remap(this.data.chests);
+        this.data.layout = 12;
+      }
       return this.data;
     },
     write() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); } catch (e) { /* armazenamento indisponível */ } },
@@ -866,7 +874,7 @@
       const wasUnlocked = this.save.unlocked;
       this.save.unlocked = Math.max(this.save.unlocked, idx + 2);
       this.chest = this.rollChest ? this.rollChest(idx, stars) : null;
-      this.newWorld = wasUnlocked !== this.save.unlocked && (idx + 1) % 10 === 0 && idx + 1 < root.LEVELS.length;
+      this.newWorld = wasUnlocked !== this.save.unlocked && root.LEVELS[idx + 1] && root.LEVELS[idx + 1].world !== root.LEVELS[idx].world;
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
       if (this.wbMaybeWarn) setTimeout(() => this.wbMaybeWarn(), 900);
@@ -1535,7 +1543,7 @@
       const w = Math.min(this.W * 0.9, 380), h = u * 7 + 26;
       const top = 16 + u * 14, gap = 10;
       root.WORLDS.forEach((wd, i) => {
-        const unlocked = this.save.unlocked > i * 10;
+        const unlocked = this.save.unlocked > (this.worldLevels(i)[0] || 0);
         const y = top + i * (h + gap);
         const x = cx - w / 2;
         ctx.fillStyle = rgba(wd.color, unlocked ? 0.22 : 0.06); ctx.fillRect(x, y, w, h);
@@ -1545,7 +1553,7 @@
         this.drawWall(x + 8, y + (h - this.tile) / 2, 0, 0, unlocked ? wd : { color: '#333344' }); this.tile = save; void s;
         F.text(ctx, (i + 1) + '. ' + wd.name, x + 48, y + 9, u, unlocked ? '#ffffff' : '#555566', 'left');
         const lv = this.worldLevels(i); let stars = 0; for (const idx of lv) stars += this.save.stars[idx] || 0;
-        F.text(ctx, unlocked ? '* ' + stars + '/' + lv.length * 3 + (wd.master ? '  CHEFAO FINAL' : '  9 FASES + CHEFAO') : 'BLOQUEADO', x + 48, y + 9 + u * 8, Math.max(1, u - 1), unlocked ? '#ffd23f' : '#555566', 'left');
+        F.text(ctx, unlocked ? '* ' + stars + '/' + lv.length * 3 + (wd.master ? '  CHEFAO FINAL' : '  8 FASES + 4 CHEFOES') : 'BLOQUEADO', x + 48, y + 9 + u * 8, Math.max(1, u - 1), unlocked ? '#ffd23f' : '#555566', 'left');
         if (wd.fluid) F.text(ctx, wd.fluid === 'lava' ? 'LAVA' : 'AGUA', x + w - 10, y + 9, Math.max(1, u - 1), wd.fluid === 'lava' ? '#ff6a1a' : '#8cf5ff', 'right');
         if (unlocked && !this.buttons.find((b) => b.id === 'w' + i)) this.buttons.push({ id: 'w' + i, x, y, w, h, fn: () => { this.worldPage = i; this.goto('levels'); } });
       });
@@ -1693,7 +1701,7 @@
       const tx = px + 24 + pw * 0.36, lineH = u * 7 + 4;
       let y = py + 12;
       const small = Math.max(1, u - 1);
-      if (L.boss) { F.text(ctx, L.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO DO MUNDO', tx, y, small, '#ff3b3b', 'left'); y += lineH * 0.8; F.text(ctx, L.boss.name, tx, y, small, '#ffffff', 'left'); }
+      if (L.boss) { F.text(ctx, L.boss.master ? 'CHEFAO MESTRE' : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO ' + L.boss.tier + ' DE 3' : 'CHEFAO DO MUNDO'), tx, y, small, '#ff3b3b', 'left'); y += lineH * 0.8; F.text(ctx, L.boss.name, tx, y, small, '#ffffff', 'left'); }
       else F.text(ctx, 'FASE ' + L.n, tx, y, u, '#ffffff', 'left');
       y += lineH;
       if (!unlocked) { F.text(ctx, 'BLOQUEADA', tx, y, small, '#ff3b3b', 'left'); y += lineH; F.text(ctx, 'COMPLETE A ANTERIOR', tx, y, small, '#888899', 'left'); return; }

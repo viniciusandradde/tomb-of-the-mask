@@ -39,7 +39,7 @@
     const w = this.level.world;
     this.boss = {
       name: def.name, hp: def.hp, maxHp: def.hp, speed: def.speed, period: def.shot, batEvery: def.bats, size: def.size || 3, master: !!def.master,
-      look: def.master ? 'master' : LOOKS[w % LOOKS.length], attacks: def.master ? MASTER_ATTACKS : ATTACKS[w % ATTACKS.length], attackIdx: 0,
+      look: def.master ? 'master' : LOOKS[w % LOOKS.length], attacks: def.master ? MASTER_ATTACKS : ATTACKS[w % ATTACKS.length].slice(0, def.attacks || 99), attackIdx: 0,
       x: COLS / 2, y: 2.5, homeY: 2.5, dir: 1, stun: 0, hitCd: 0, timer: 2.2, coreTimer: 0.8, dead: false, deathT: 0, phase: 0, flash: 0,
       pending: null, slam: null, dark: 0, enraged: false, shakeT: 0,
     };

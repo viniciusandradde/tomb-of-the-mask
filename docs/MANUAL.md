@@ -12,7 +12,7 @@
 ## 2. Modos
 | Modo | O que é |
 |---|---|
-| **Aventura** | 9 mundos. Cada mundo tem 9 fases e um **chefão** no fim; o mundo 9 é o **Chefão Mestre**. Escolha a fase no mapa estilo Mario: deslize para andar com o personagem, toque na porta e depois em JOGAR. A prévia mostra miniatura, estrelas, recorde e perigos. |
+| **Aventura** | 9 mundos. Cada mundo tem 12 fases com um **chefão a cada 3 fases**: três chefinhos (bebê, pequeno e grande, do mais fácil ao mais forte) e o chefão do mundo na fase 12; o mundo 9 é o **Chefão Mestre**. Escolha a fase no mapa estilo Mario: deslize para andar com o personagem, toque na porta e depois em JOGAR. A prévia mostra miniatura, estrelas, recorde e perigos. |
 | **Arcade** | Coluna infinita para cima. Uma barreira que pisca na cor do trecho sobe sem parar; encostou, acabou. Pontuação por altura. |
 | **Lúdico / Clássico** | Botão na tela inicial. A **dificuldade é a mesma**. O Lúdico acrescenta voz em português, elogios, confete, "OPA!" no lugar de "você morreu", rostinhos fofos e a Missão de Brincar. |
 

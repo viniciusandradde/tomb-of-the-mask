@@ -14,19 +14,19 @@
   // Máscaras: bônus em % (coin = moedas ganhas; magnet/freeze/addict/boost = duração)
   const MASKS = [
     { id: 'classica', name: 'CLASSICA', color: '#ffd23f', eye: '#1a1a1a', cost: 0, level: 1, desc: 'A MASCARA ORIGINAL' },
-    { id: 'gatinho', name: 'GATINHO', color: '#ffb3dc', eye: '#3a1030', cost: 300, level: 8, coin: 10, magnet: 25, desc: '+10% MOEDAS  +25% IMA' },
-    { id: 'pirata', name: 'PIRATA', color: '#c0392b', eye: '#1a1a1a', cost: 450, level: 10, coin: 15, immune: 'bat', desc: '+15% MOEDAS  IMUNE A MORCEGOS' },
-    { id: 'coelho', name: 'COELHO', color: '#f0f0f0', eye: '#ff4fa3', cost: 500, level: 12, coin: 15, freeze: 30, desc: '+15% MOEDAS  +30% CONGELAR' },
+    { id: 'gatinho', name: 'GATINHO', color: '#ffb3dc', eye: '#3a1030', cost: 300, level: 10, coin: 10, magnet: 25, desc: '+10% MOEDAS  +25% IMA' },
+    { id: 'pirata', name: 'PIRATA', color: '#c0392b', eye: '#1a1a1a', cost: 450, level: 12, coin: 15, immune: 'bat', desc: '+15% MOEDAS  IMUNE A MORCEGOS' },
+    { id: 'coelho', name: 'COELHO', color: '#f0f0f0', eye: '#ff4fa3', cost: 500, level: 14, coin: 15, freeze: 30, desc: '+15% MOEDAS  +30% CONGELAR' },
     { id: 'cachorro', name: 'CACHORRO', color: '#b5742a', eye: '#1a1a1a', cost: 600, level: 1, coin: 10, immune: 'arrow', desc: '+10% MOEDAS  IMUNE A FLECHAS' },
-    { id: 'palhaco', name: 'PALHACO', color: '#7fc33a', eye: '#1a1a1a', cost: 700, level: 14, freeze: 20, magnet: 20, desc: '+20% CONGELAR  +20% IMA' },
-    { id: 'caveira', name: 'CAVEIRA', color: '#d8d8e0', eye: '#05030a', cost: 900, level: 17, coin: 25, freeze: 25, addict: 30, desc: '+25% MOEDAS +25% CONG. +30% VIC.' },
-    { id: 'vodu', name: 'VODU', color: '#5e2a8a', eye: '#8cf5ff', cost: 1200, level: 20, coin: 35, freeze: 35, addict: 40, desc: '+35% MOEDAS +35% CONG. +40% VIC.' },
+    { id: 'palhaco', name: 'PALHACO', color: '#7fc33a', eye: '#1a1a1a', cost: 700, level: 17, freeze: 20, magnet: 20, desc: '+20% CONGELAR  +20% IMA' },
+    { id: 'caveira', name: 'CAVEIRA', color: '#d8d8e0', eye: '#05030a', cost: 900, level: 20, coin: 25, freeze: 25, addict: 30, desc: '+25% MOEDAS +25% CONG. +30% VIC.' },
+    { id: 'vodu', name: 'VODU', color: '#5e2a8a', eye: '#8cf5ff', cost: 1200, level: 24, coin: 35, freeze: 35, addict: 40, desc: '+35% MOEDAS +35% CONG. +40% VIC.' },
     { id: 'cavaleiro', name: 'CAVALEIRO', color: '#8fa3b8', eye: '#1a1a1a', cost: 1500, level: 1, extraCoins: 2, desc: '+2 MOEDAS EXTRAS EM CADA FASE' },
-    { id: 'fantasma', name: 'FANTASMA', color: '#8cf5ff', eye: '#0a2a33', cost: 1600, level: 30, permaMagnet: true, desc: 'IMA DE PONTOS PERMANENTE' },
-    { id: 'rei', name: 'REI', color: '#f5c542', eye: '#4a3a00', cost: 2000, level: 40, coin: 100, boost: 30, desc: 'MOEDAS X2  +30% MULTIPLICADOR' },
-    { id: 'sombra', name: 'SOMBRA', color: '#b04cff', eye: '#eaffff', cost: 2500, level: 50, slowBats: true, immune: 'trap', desc: 'MORCEGOS LENTOS  IMUNE A ESP. MOVEIS' },
+    { id: 'fantasma', name: 'FANTASMA', color: '#8cf5ff', eye: '#0a2a33', cost: 1600, level: 36, permaMagnet: true, desc: 'IMA DE PONTOS PERMANENTE' },
+    { id: 'rei', name: 'REI', color: '#f5c542', eye: '#4a3a00', cost: 2000, level: 48, coin: 100, boost: 30, desc: 'MOEDAS X2  +30% MULTIPLICADOR' },
+    { id: 'sombra', name: 'SOMBRA', color: '#b04cff', eye: '#eaffff', cost: 2500, level: 60, slowBats: true, immune: 'trap', desc: 'MORCEGOS LENTOS  IMUNE A ESP. MOVEIS' },
     { id: 'sonequinha', name: 'SONEQUINHA', color: '#c9b8ff', eye: '#3a2a6a', cost: 0, level: 1, stickers: 5, freeze: 20, desc: 'PREMIO: 5 MISSOES DE BRINCAR. +20% CONGELAR' },
-    { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 81, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU: +50% EM TUDO E ESCUDO INICIAL' },
+    { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 97, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU: +50% EM TUDO E ESCUDO INICIAL' },
   ];
   root.MASKS = MASKS;
 
