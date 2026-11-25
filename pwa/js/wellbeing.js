@@ -288,7 +288,7 @@
     this.renderBackdrop('#8cf5ff');
     F.text(ctx, 'PAUSA SAUDAVEL', cx, 16, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#0f4d52' });
     F.text(ctx, 'MISSAO DE BRINCAR: CONFIGURACAO DOS PAIS', cx, 16 + u * 12, small, '#888899', 'center');
-    const w = Math.min(this.W * 0.9, 380), step = Math.min(u * 7 + 26, (this.H - 16 - u * 26 - u * 7 - 110) / 9); let y = 16 + u * 26;
+    const w = Math.min(this.W * 0.9, 380), step = Math.min(u * 7 + 26, (this.H - 16 - u * 26 - u * 7 - 110) / 10); let y = 16 + u * 26;
     const saveCfg = () => { try { localStorage.setItem('tumba-da-mascara-save-v1', JSON.stringify(this.save)); } catch (e) { /* ignorado */ } this.buttons = []; };
     this.drawButton('MISSAO DE BRINCAR: ' + (cfg.enabled ? 'LIGADA' : 'DESLIGADA'), cx, y, w, () => { cfg.enabled = !cfg.enabled; saveCfg(); if (!cfg.enabled && this.wb.status !== 'idle') { this.wb.status = 'idle'; this.wb.playSec = 0; this.wb.warned = false; this.wb.missionStart = 0; this.wb.insistN = 0; this.wbSave(); this.toastMsg('MISSAO DESLIGADA. JOGO LIBERADO.'); } }, cfg.enabled ? '#7fc33a' : '#ff3b3b', 'pe'); y += step;
     this.drawButton('TEMPO DE JOGO: ' + fmtMin(cfg.limitMin), cx, y, w, () => { const i = LIMITS.indexOf(cfg.limitMin); cfg.limitMin = LIMITS[(i + 1) % LIMITS.length]; saveCfg(); }, '#8cf5ff', 'pl'); y += step;
@@ -297,6 +297,7 @@
     this.drawButton('NOME: ' + (cfg.childName ? cfg.childName.toUpperCase() : 'TOQUE PARA ESCREVER'), cx, y, w, () => { const n = root.prompt ? root.prompt('Nome da criança (usado nas falas):', cfg.childName || '') : null; if (n !== null) { cfg.childName = String(n).slice(0, 16); saveCfg(); } }, '#8cf5ff', 'pn'); y += step;
     this.drawButton('TAMBEM NO MODO CLASSICO: ' + (cfg.enabledClassic ? 'SIM' : 'NAO'), cx, y, w, () => { cfg.enabledClassic = !cfg.enabledClassic; saveCfg(); }, '#8cf5ff', 'pc'); y += step;
     this.drawButton('TROCAR PIN DOS PAIS', cx, y, w, () => this.wbOpenGate(() => { this.state = 'parent'; this.buttons = []; }, 'create'), '#8cf5ff', 'ppin'); y += step;
+    this.drawButton('+10000 MOEDAS  (TEM $' + this.save.coins + ')', cx, y, w, () => { this.save.coins += 10000; saveCfg(); this.audio.coin(); this.toastMsg('+10000 MOEDAS!'); }, '#ffd23f', 'pcoins'); y += step;
     F.text(ctx, 'HOJE: ' + Math.floor(this.wb.playSec / 60) + ' MIN NESTA RODADA, ' + this.wb.cycles + ' DE ' + cfg.cyclesPerDay + ' AVENTURAS   MISSOES: ' + (cfg.medals || 0), cx, y - u * 2, small, '#ffd23f', 'center'); y += step * 0.8;
     if (this.wb.status !== 'idle') { this.drawButton('LIBERAR O JOGO AGORA', cx, y, w, () => this.wbParentUnlock(), '#ffd23f', 'pu'); y += step; }
     else {
