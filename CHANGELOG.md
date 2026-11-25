@@ -1,5 +1,8 @@
 # Histórico de versões
 
+## 1.8.4 — Botão PAIS na tela inicial
+- Botão "⚙ PAIS" no canto da tela inicial abre o PIN; ao voltar do painel, retorna à tela inicial.
+
 ## 1.8.3 — Área dos pais com PIN
 - Botão "⚙ PAIS" visível nas telas da pausa (um toque) no lugar do toque longo de 3 s, que falhava no celular e impedia o
   adulto de desligar o descanso.

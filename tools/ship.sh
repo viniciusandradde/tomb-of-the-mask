@@ -13,7 +13,7 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 git add -A
 git commit -q -m "$MSG
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_0126L2T4JtTxqUNXm4kTD5H1" || echo "nada novo para commitar"
 git push -u origin "$BRANCH" 2>&1 | tail -1
 git fetch -q origin master
@@ -21,7 +21,7 @@ git checkout -q master
 git reset -q --hard origin/master
 git merge --no-ff -q "$BRANCH" -m "Mescla: $(echo "$MSG" | head -1)
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_0126L2T4JtTxqUNXm4kTD5H1"
 git push origin master 2>&1 | tail -1
 git checkout -q "$BRANCH"
