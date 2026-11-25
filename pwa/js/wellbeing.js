@@ -31,8 +31,8 @@
     // (b) missões fora da tela: elogio de processo -> convite -> missão -> "toque na mão e vá"
     missions: [
       { id: 'carrinhos', title: 'CORRIDA DE CARRINHOS', icon: 'car', text: 'Você foi muito bem! Agora, para continuar, vamos fazer uma missão, tudo bem? Pegue seus carrinhos e faça uma corrida bem grande pela casa. Toque na mão e vá!' },
-      { id: 'ferro', title: 'HOMEM DE FERRO VOA', icon: 'hero', text: 'Parabéns por chegar até aqui! Missão: encontre o Homem de Ferro e voe com ele por três lugares da casa. Depois volte e me conte. Toque na mão e vá!' },
-      { id: 'capitao', title: 'ESCUDO DO CAPITAO', icon: 'shield', text: 'Você jogou com muita força! Missão: pegue o Capitão América e proteja alguém da sua família com o escudo. Toque na mão e vá!' },
+      { id: 'ferro', title: 'HEROI VOADOR', icon: 'hero', text: 'Parabéns por chegar até aqui! Missão: pegue o seu super-herói favorito e voe com ele por três lugares da casa. Depois volte e me conte. Toque na mão e vá!' },
+      { id: 'capitao', title: 'ESCUDO DO HEROI', icon: 'shield', text: 'Você jogou com muita força! Missão: pegue um boneco com escudo, ou faça um escudo de papel, e proteja alguém da sua família. Toque na mão e vá!' },
       { id: 'pulos', title: 'PULOS DE AVENTUREIRO', icon: 'jump', text: 'Suas mãos trabalharam muito. Agora é a vez das pernas! Missão: dê dez pulos bem altos e corra até a porta e volte. Toque na mão e vá!' },
       { id: 'agua', title: 'AGUA DE HEROI', icon: 'water', text: 'Que aventura! Todo herói precisa de água. Missão: peça para um adulto um copo de água e beba tudinho. Depois faça um lanche. Toque na mão e vá!' },
       { id: 'desenho', title: 'DESENHO DO LABIRINTO', icon: 'pencil', text: 'Você venceu labirintos difíceis! Missão: pegue papel e lápis e desenhe o seu próprio labirinto. Mostre para alguém. Toque na mão e vá!' },
@@ -53,7 +53,7 @@
       ['Oi! A missão está te esperando. Vai lá, vai ser divertido!', 'Eu ainda estou aqui. Vá brincar e depois volte.'],
       ['Lembra da missão? Primeiro a aventura lá fora, depois o jogo. Pode ir!', 'A ampulheta ainda está passando. Enquanto isso, vai brincar. Eu espero.'],
       ['Eu não vou a lugar nenhum. Quando a mão aparecer, você volta. Combinado?', 'Está difícil sair, eu sei. Respira fundo comigo... Agora vai brincar.'],
-      ['Vamos chamar um adulto para brincar junto? Vai lá chamar.', 'Chame a mamãe ou o papai para fazer a missão com você. Vai ser mais legal a dois.'],
+      ['Vamos chamar um adulto para brincar junto? Vai lá chamar.', 'Chame um adulto da família para fazer a missão com você. Vai ser mais legal a dois.'],
     ],
     // (d) parabéns no retorno + hi five
     back: [
@@ -72,14 +72,16 @@
       'Tudo bem! Hoje o adulto decidiu assim. Vamos continuar a aventura.',
       'Combinado com o adulto. Bora voltar pro labirinto!',
       'Ok, de volta ao jogo. A missão fica para a próxima vez.',
-      'Beleza! O papai ou a mamãe liberou. Vamos jogar mais um pouco.',
+      'Beleza! O adulto liberou. Vamos jogar mais um pouco.',
     ],
     goodnight: 'Que dia de aventuras! Agora a Máscara vai dormir até amanhã. Boa noite, [NOME]!',
-    parentQuestions: [[6, 7], [8, 7], [9, 6], [7, 7], [8, 9], [6, 9]],
+    // portão dos pais: soma de dois dígitos (tabuada simples é resolvida por crianças a partir de ~8 anos)
+    parentQuestions: [[23, 48], [37, 26], [45, 38], [29, 54], [56, 27], [18, 65]],
   };
   const LIMITS = [10, 15, 20, 30, 45, 60, 90, 120], BREAKS = [10, 15, 20, 30], CYCLES = [1, 2, 3];
   const fmtMin = (m) => m < 60 ? m + ' MIN' : m === 60 ? '1 HORA' : m === 90 ? '1H30' : (m / 60) + ' HORAS';
-  const today = () => new Date().toISOString().slice(0, 10);
+  // data do dia no fuso do aparelho (toISOString usa UTC e, no Brasil, virava o dia às 21h)
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
   // ------------------------------------------------------------------ estado
   G.wbLoad = function () {
@@ -247,7 +249,7 @@
       if (g.answer === g.first) { cfg.pin = g.answer; this.wbSaveCfg(); this.toastMsg('PIN GRAVADO'); pass(); }
       else { g.wrong = true; g.answer = ''; g.first = ''; g.mode = 'create'; this.audio.bump(); }
     } else if (g.mode === 'math') {
-      if (parseInt(g.answer, 10) === g.a * g.b) { g.answer = ''; g.first = ''; g.wrong = false; g.mode = 'create'; }
+      if (parseInt(g.answer, 10) === g.a + g.b) { g.answer = ''; g.first = ''; g.wrong = false; g.mode = 'create'; }
       else { g.wrong = true; g.answer = ''; this.audio.bump(); }
     }
   };
@@ -258,7 +260,7 @@
     const sub = { pin: 'DIGITE O PIN DOS PAIS', create: 'CRIE UM PIN DE 4 NUMEROS', confirm: 'DIGITE O PIN DE NOVO', math: 'ESQUECEU? RESPONDA A CONTA' }[g.mode];
     F.text(ctx, sub, cx, 20 + u * 12, small, '#ffd23f', 'center');
     const maxLen = g.mode === 'math' ? 3 : 4;
-    if (g.mode === 'math') F.text(ctx, 'QUANTO E ' + g.a + ' X ' + g.b + ' ?', cx, this.H * 0.22, u * 2, '#ffffff', 'center');
+    if (g.mode === 'math') F.text(ctx, 'QUANTO E ' + g.a + ' + ' + g.b + ' ?', cx, this.H * 0.22, u * 2, '#ffffff', 'center');
     else F.text(ctx, g.wrong ? (g.mode === 'pin' ? 'PIN ERRADO. TENTE DE NOVO.' : 'NAO CONFERIU. TENTE DE NOVO.') : 'PIN', cx, this.H * 0.22, g.wrong ? Math.max(1, u) : u * 2, g.wrong ? '#ff3b3b' : '#ffffff', 'center');
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(cx - u * 16, this.H * 0.22 + u * 20, u * 32, u * 7 + 16);
     const shown = g.mode === 'math' ? g.answer : '*'.repeat(g.answer.length);

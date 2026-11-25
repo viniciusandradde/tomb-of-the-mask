@@ -189,8 +189,8 @@ Fluxo (padrão 15 min de jogo, 15 min de pausa, 2 aventuras por dia; tudo ajust�
    próxima fase é um chefão e o tempo está acabando, a missão vem antes ("o chefão espera você").
 3. **Tela da missão**: ilustração grande em pixel art (carrinho, herói, escudo, blocos, água, lápis, coração, sol, livro,
    urso), a Máscara companheira, texto falado em voz pt-BR com um sininho antes, botão "ouvir de novo", e a **mão** como botão
-   ("toque na mão e vá"). Um chime distinto avisa o adulto. 12 missões (corrida de carrinhos, Homem de Ferro voa, escudo do
-   Capitão, pulos, água de herói, desenho do labirinto, abraço de equipe, caça na janela, guardar o tesouro, livro ou dança,
+   ("toque na mão e vá"). Um chime distinto avisa o adulto. 12 missões (corrida de carrinhos, herói voador, escudo do
+   herói, pulos, água de herói, desenho do labirinto, abraço de equipe, caça na janela, guardar o tesouro, livro ou dança,
    chefão de verdade, amigo da selva), sorteadas sem repetir as 3 últimas, com peso maior para o tema do mundo atual e para
    os brinquedos favoritos, e missões calmas (janela, livro, água) à noite.
 4. **Pausa em andamento**: a Máscara dorme (zZz), um sol atravessa o céu até uma casinha (tempo sem números). Sem sons
@@ -205,7 +205,7 @@ Fluxo (padrão 15 min de jogo, 15 min de pausa, 2 aventuras por dia; tudo ajust�
 7. **Segunda aventura do dia** avisa que é a última; depois do hi five aparece "Até amanhã" (lua, Máscara dormindo) e só o
    adulto libera. No dia seguinte tudo zera.
 8. **Área dos pais**: em Opções ou no botão "⚙ PAIS" das telas da pausa, com PIN de 4 números criado pelo adulto
-   (recuperação por conta de multiplicação). O toque longo de 3 s foi abandonado: falhava no celular e deixava o pai preso.
+   (recuperação por soma de dois dígitos). O toque longo de 3 s foi abandonado: falhava no celular e deixava o pai preso.
    Ligar/desligar (ligada por padrão no Modo Lúdico, opcional no Clássico), tempo de jogo (10, 15, 20, 30, 45 min, 1 h,
    1h30 ou 2 h; o adulto decide), tempo da pausa (10/15/20/30), aventuras por dia (1/2/3), nome da criança (entra nas
    falas), "pausar agora" (missão no fim da fase), "liberar agora" (frase neutra, sem julgamento) e zerar o contador.

@@ -1,10 +1,17 @@
 # Histórico de versões
 
-## 1.8.1 — Área dos pais com PIN
+## 1.8.3 — Área dos pais com PIN
 - Botão "⚙ PAIS" visível nas telas da pausa (um toque) no lugar do toque longo de 3 s, que falhava no celular e impedia o
   adulto de desligar o descanso.
-- PIN de 4 números criado na primeira vez, "esqueci o PIN" (multiplicação) e "trocar PIN" no painel.
+- PIN de 4 números criado na primeira vez, "esqueci o PIN" (soma de dois dígitos) e "trocar PIN" no painel.
 - Desligar a Missão de Brincar durante a pausa libera o jogo na hora.
+
+## 1.8.2 — Padrão VSA de Bem-Estar Digital
+- "Aventuras por dia" passa a zerar à meia-noite do horário local (antes virava em UTC e, no Brasil, liberava novas aventuras às 21h).
+- Portão dos pais com soma de dois dígitos no lugar da tabuada simples.
+- Missões sem personagens licenciados ("herói voador", "escudo do herói") e falas com "um adulto" no lugar de "mamãe ou papai".
+- Verificador de linguagem barra também culpa, família restrita e nomes de personagens licenciados.
+- Documentos do padrão: `docs/standards/CHILD-WELLBEING-STANDARD.md` e `docs/ADOCAO-PADRAO-BEM-ESTAR.md`.
 
 ## 1.8 — Linguagem gentil, lava no tempo e volume
 - Falas e textos sem bater/golpear: chefe é "encantado" ao encostar nele tonto; verificador de linguagem no CI.

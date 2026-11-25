@@ -190,7 +190,7 @@ const { spawn } = require('child_process');
     const gatePin = game.gate.mode; type('1111'); const wrong = game.gate.wrong && game.state === 'gate'; type('2580'); const parent2 = game.state;
     game.wbOpenGate(() => { game.state = 'parent'; game.buttons = []; });
     game.buttons = []; game.renderGate(); game.buttons.find((x) => x.id === 'forgot').fn(); const gateMath = game.gate.mode;
-    type(String(game.gate.a * game.gate.b)); key('OK'); const gateAfterMath = game.gate.mode; type('4321'); type('4321');
+    type(String(game.gate.a + game.gate.b)); key('OK'); const gateAfterMath = game.gate.mode; type('4321'); type('4321');
     const parent3 = game.state, pinNew = game.save.wbCfg.pin;
     // desligar a missao durante a pausa libera o jogo
     game.wb.status = 'break'; game.state = 'parent'; game.buttons = []; game.renderParentPanel(); game.buttons.find((x) => x.id === 'pe').fn();
