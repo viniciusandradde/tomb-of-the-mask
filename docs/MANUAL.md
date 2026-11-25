@@ -40,8 +40,10 @@ com a Máscara dormindo e um sol atravessando o céu. Se a criança insistir, o 
 depois fica em silêncio. Ao voltar, botão VOLTEI! e um **hi five** com confete. Ganha uma figurinha no Quadro de
 Aventuras. Duas aventuras por dia (ajustável); depois, "Até amanhã".
 
-**Área dos pais:** em Opções > "PAUSA SAUDÁVEL (PAIS)", ou segurando 3 segundos a engrenagem nas telas da pausa, e
-respondendo uma multiplicação. Lá: ligar/desligar, tempo de jogo (de 10 minutos até 2 horas), tempo da pausa, aventuras por dia, nome da criança (entra
+**Área dos pais:** em Opções > "PAUSA SAUDÁVEL (PAIS)" ou no botão **⚙ PAIS** no canto das telas da pausa (missão,
+descanso, hi five, "até amanhã"). Pede um **PIN de 4 números**: na primeira vez você cria o PIN (digita duas vezes); depois
+basta digitar. Esqueceu? "ESQUECI O PIN" faz uma conta de multiplicação e deixa criar um PIN novo. No painel há "TROCAR PIN".
+Desligar a Missão de Brincar durante uma pausa libera o jogo na hora. Lá: ligar/desligar, tempo de jogo (de 10 minutos até 2 horas), tempo da pausa, aventuras por dia, nome da criança (entra
 nas falas), "pausar agora", "liberar agora", zerar contador, usar também no Modo Clássico.
 
 Recomendação (SBP/OMS/AAP): até 1 hora de tela por dia dos 2 aos 5 anos, com adulto por perto, nunca na hora de dormir.

@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 1.8.1 — Área dos pais com PIN
+- Botão "⚙ PAIS" visível nas telas da pausa (um toque) no lugar do toque longo de 3 s, que falhava no celular e impedia o
+  adulto de desligar o descanso.
+- PIN de 4 números criado na primeira vez, "esqueci o PIN" (multiplicação) e "trocar PIN" no painel.
+- Desligar a Missão de Brincar durante a pausa libera o jogo na hora.
+
 ## 1.8 — Linguagem gentil, lava no tempo e volume
 - Falas e textos sem bater/golpear: chefe é "encantado" ao encostar nele tonto; verificador de linguagem no CI.
 - Lava/água calibrada por simulação de tempo com reação de criança (fase 34 estava impossível); perseguição mais branda.

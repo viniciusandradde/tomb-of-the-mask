@@ -86,7 +86,7 @@
     let st = null;
     try { st = JSON.parse(localStorage.getItem(KEY)); } catch (e) { st = null; }
     this.wb = Object.assign({ playSec: 0, status: 'idle', missionStart: 0, missionIdx: -1, recent: [], warned: false, insistN: 0, lastInsistAt: 0, lastActive: Date.now(), day: today(), cycles: 0 }, st || {});
-    this.save.wbCfg = Object.assign({ enabled: true, limitMin: 15, breakMin: 15, cyclesPerDay: 2, medals: 0, enabledClassic: false, childName: '' }, this.save.wbCfg || {});
+    this.save.wbCfg = Object.assign({ enabled: true, limitMin: 15, breakMin: 15, cyclesPerDay: 2, medals: 0, enabledClassic: false, childName: '', pin: '' }, this.save.wbCfg || {});
     // novo dia: zera ciclos e contador
     if (this.wb.day !== today()) { this.wb.day = today(); this.wb.cycles = 0; this.wb.playSec = 0; if (this.wb.status === 'done') this.wb.status = 'idle'; }
     // se ficou muito tempo sem jogar (mais que a pausa), o contador zera
@@ -225,20 +225,45 @@
   };
 
   // ------------------------------------------------------------------ portão parental
-  G.wbOpenGate = function (after) {
+  // Acesso dos pais por PIN de 4 numeros. Sem PIN gravado: cria na primeira vez.
+  // "Esqueci o PIN": conta de multiplicacao (fora do alcance de 4-5 anos) e cria um PIN novo.
+  G.wbOpenGate = function (after, mode) {
+    const cfg = this.save.wbCfg;
     const [a, b] = this.pick(C.parentQuestions);
-    this.gate = { a, b, answer: '', after, t: 0, wrong: false };
+    this.gate = { mode: mode || (cfg.pin ? 'pin' : 'create'), a, b, answer: '', first: '', after, wrong: false };
     this.state = 'gate'; this.buttons = [];
   };
+  G.wbSaveCfg = function () { try { localStorage.setItem('tumba-da-mascara-save-v1', JSON.stringify(this.save)); } catch (e) { /* ignorado */ } };
+  G.wbGateSubmit = function () {
+    const g = this.gate, cfg = this.save.wbCfg;
+    const pass = () => { const after = g.after; this.gate = null; after(); };
+    if (g.mode === 'pin') {
+      if (g.answer.length === 4 && g.answer === cfg.pin) pass();
+      else { g.wrong = true; g.answer = ''; this.audio.bump(); }
+    } else if (g.mode === 'create') {
+      if (g.answer.length === 4) { g.first = g.answer; g.answer = ''; g.mode = 'confirm'; g.wrong = false; }
+      else { g.wrong = true; this.audio.bump(); }
+    } else if (g.mode === 'confirm') {
+      if (g.answer === g.first) { cfg.pin = g.answer; this.wbSaveCfg(); this.toastMsg('PIN GRAVADO'); pass(); }
+      else { g.wrong = true; g.answer = ''; g.first = ''; g.mode = 'create'; this.audio.bump(); }
+    } else if (g.mode === 'math') {
+      if (parseInt(g.answer, 10) === g.a * g.b) { g.answer = ''; g.first = ''; g.wrong = false; g.mode = 'create'; }
+      else { g.wrong = true; g.answer = ''; this.audio.bump(); }
+    }
+  };
   G.renderGate = function () {
-    const ctx = this.ctx, u = this.ui, cx = this.W / 2, g = this.gate;
+    const ctx = this.ctx, u = this.ui, cx = this.W / 2, g = this.gate, small = Math.max(1, u - 1);
     this.renderBackdrop('#8cf5ff');
     F.text(ctx, 'AREA DOS PAIS', cx, 20, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#0f4d52' });
-    F.text(ctx, 'RESPONDA PARA CONTINUAR', cx, 20 + u * 12, Math.max(1, u - 1), '#888899', 'center');
-    F.text(ctx, 'QUANTO E ' + g.a + ' X ' + g.b + ' ?', cx, this.H * 0.22, u * 2, '#ffffff', 'center');
+    const sub = { pin: 'DIGITE O PIN DOS PAIS', create: 'CRIE UM PIN DE 4 NUMEROS', confirm: 'DIGITE O PIN DE NOVO', math: 'ESQUECEU? RESPONDA A CONTA' }[g.mode];
+    F.text(ctx, sub, cx, 20 + u * 12, small, '#ffd23f', 'center');
+    const maxLen = g.mode === 'math' ? 3 : 4;
+    if (g.mode === 'math') F.text(ctx, 'QUANTO E ' + g.a + ' X ' + g.b + ' ?', cx, this.H * 0.22, u * 2, '#ffffff', 'center');
+    else F.text(ctx, g.wrong ? (g.mode === 'pin' ? 'PIN ERRADO. TENTE DE NOVO.' : 'NAO CONFERIU. TENTE DE NOVO.') : 'PIN', cx, this.H * 0.22, g.wrong ? Math.max(1, u) : u * 2, g.wrong ? '#ff3b3b' : '#ffffff', 'center');
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(cx - u * 16, this.H * 0.22 + u * 20, u * 32, u * 7 + 16);
-    F.text(ctx, g.answer || '_', cx, this.H * 0.22 + u * 20 + 8, u * 2, g.wrong ? '#ff3b3b' : '#ffd23f', 'center');
-    // teclado numérico
+    const shown = g.mode === 'math' ? g.answer : '*'.repeat(g.answer.length);
+    F.text(ctx, shown || '_', cx, this.H * 0.22 + u * 20 + 8, u * 2, g.wrong ? '#ff3b3b' : '#ffd23f', 'center');
+    // teclado numerico
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'APAGAR', '0', 'OK'];
     const kw = Math.min(this.W * 0.28, 110), kh = u * 7 + 18, top = this.H * 0.22 + u * 36;
     keys.forEach((k, i) => {
@@ -246,28 +271,29 @@
       const x = cx + (col - 1) * (kw + 8), y = top + row * (kh + 8) + kh / 2;
       this.drawButton(k, x, y, kw, () => {
         if (k === 'APAGAR') g.answer = g.answer.slice(0, -1);
-        else if (k === 'OK') {
-          if (parseInt(g.answer, 10) === g.a * g.b) { const after = g.after; this.gate = null; after(); }
-          else { g.wrong = true; g.answer = ''; this.audio.bump(); }
-        } else if (g.answer.length < 3) { g.answer += k; g.wrong = false; }
+        else if (k === 'OK') this.wbGateSubmit();
+        else if (g.answer.length < maxLen) { g.answer += k; g.wrong = false; if (g.mode !== 'math' && g.answer.length === 4) this.wbGateSubmit(); }
         this.buttons = [];
       }, k === 'OK' ? '#7fc33a' : (k === 'APAGAR' ? '#ff3b3b' : '#8cf5ff'), 'k' + i);
     });
-    this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => { this.gate = null; this.state = this.wb.status === 'idle' ? 'settings' : 'break'; this.buttons = []; }, '#888899', 'back');
+    const bw = Math.min(this.W * 0.6, 220);
+    if (g.mode === 'pin') this.drawButton('ESQUECI O PIN', cx, this.H - u * 7 - 18 - (u * 7 + 26), bw, () => { g.mode = 'math'; g.answer = ''; g.wrong = false; this.buttons = []; }, '#ffd23f', 'forgot');
+    this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, bw, () => { this.gate = null; this.state = this.wb.status === 'idle' ? 'settings' : 'break'; this.buttons = []; }, '#888899', 'back');
   };
   G.renderParentPanel = function () {
     const ctx = this.ctx, u = this.ui, cx = this.W / 2, cfg = this.save.wbCfg, small = Math.max(1, u - 1);
     this.renderBackdrop('#8cf5ff');
     F.text(ctx, 'PAUSA SAUDAVEL', cx, 16, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#0f4d52' });
     F.text(ctx, 'MISSAO DE BRINCAR: CONFIGURACAO DOS PAIS', cx, 16 + u * 12, small, '#888899', 'center');
-    const w = Math.min(this.W * 0.9, 380), step = Math.min(u * 7 + 26, (this.H - 16 - u * 26 - u * 7 - 110) / 8); let y = 16 + u * 26;
+    const w = Math.min(this.W * 0.9, 380), step = Math.min(u * 7 + 26, (this.H - 16 - u * 26 - u * 7 - 110) / 9); let y = 16 + u * 26;
     const saveCfg = () => { try { localStorage.setItem('tumba-da-mascara-save-v1', JSON.stringify(this.save)); } catch (e) { /* ignorado */ } this.buttons = []; };
-    this.drawButton('MISSAO DE BRINCAR: ' + (cfg.enabled ? 'LIGADA' : 'DESLIGADA'), cx, y, w, () => { cfg.enabled = !cfg.enabled; saveCfg(); }, cfg.enabled ? '#7fc33a' : '#ff3b3b', 'pe'); y += step;
+    this.drawButton('MISSAO DE BRINCAR: ' + (cfg.enabled ? 'LIGADA' : 'DESLIGADA'), cx, y, w, () => { cfg.enabled = !cfg.enabled; saveCfg(); if (!cfg.enabled && this.wb.status !== 'idle') { this.wb.status = 'idle'; this.wb.playSec = 0; this.wb.warned = false; this.wb.missionStart = 0; this.wb.insistN = 0; this.wbSave(); this.toastMsg('MISSAO DESLIGADA. JOGO LIBERADO.'); } }, cfg.enabled ? '#7fc33a' : '#ff3b3b', 'pe'); y += step;
     this.drawButton('TEMPO DE JOGO: ' + fmtMin(cfg.limitMin), cx, y, w, () => { const i = LIMITS.indexOf(cfg.limitMin); cfg.limitMin = LIMITS[(i + 1) % LIMITS.length]; saveCfg(); }, '#8cf5ff', 'pl'); y += step;
     this.drawButton('TEMPO DA PAUSA: ' + fmtMin(cfg.breakMin), cx, y, w, () => { cfg.breakMin = BREAKS[(BREAKS.indexOf(cfg.breakMin) + 1) % BREAKS.length]; saveCfg(); }, '#8cf5ff', 'pb'); y += step;
     this.drawButton('AVENTURAS POR DIA: ' + cfg.cyclesPerDay, cx, y, w, () => { cfg.cyclesPerDay = CYCLES[(CYCLES.indexOf(cfg.cyclesPerDay) + 1) % CYCLES.length]; saveCfg(); }, '#8cf5ff', 'pcy'); y += step;
     this.drawButton('NOME: ' + (cfg.childName ? cfg.childName.toUpperCase() : 'TOQUE PARA ESCREVER'), cx, y, w, () => { const n = root.prompt ? root.prompt('Nome da criança (usado nas falas):', cfg.childName || '') : null; if (n !== null) { cfg.childName = String(n).slice(0, 16); saveCfg(); } }, '#8cf5ff', 'pn'); y += step;
     this.drawButton('TAMBEM NO MODO CLASSICO: ' + (cfg.enabledClassic ? 'SIM' : 'NAO'), cx, y, w, () => { cfg.enabledClassic = !cfg.enabledClassic; saveCfg(); }, '#8cf5ff', 'pc'); y += step;
+    this.drawButton('TROCAR PIN DOS PAIS', cx, y, w, () => this.wbOpenGate(() => { this.state = 'parent'; this.buttons = []; }, 'create'), '#8cf5ff', 'ppin'); y += step;
     F.text(ctx, 'HOJE: ' + Math.floor(this.wb.playSec / 60) + ' MIN NESTA RODADA, ' + this.wb.cycles + ' DE ' + cfg.cyclesPerDay + ' AVENTURAS   MISSOES: ' + (cfg.medals || 0), cx, y - u * 2, small, '#ffd23f', 'center'); y += step * 0.8;
     if (this.wb.status !== 'idle') { this.drawButton('LIBERAR O JOGO AGORA', cx, y, w, () => this.wbParentUnlock(), '#ffd23f', 'pu'); y += step; }
     else {
@@ -330,16 +356,8 @@
     ctx.fillStyle = 'rgba(3,2,8,0.55)'; ctx.fillRect(0, 0, this.W, this.H);
     F.text(ctx, title, cx, 18, Math.min(u * 1.5 | 0 || u, Math.floor((this.W - 20) / (title.length * 6))), '#ffd23f', 'center', { shadow: '#7a3a00' });
     if (sub) F.text(ctx, sub, cx, 18 + u * 12, Math.max(1, u - 1), '#ffffff', 'center');
-    // engrenagem dos pais (toque longo = portão)
-    const gx = this.W - 26, gy = 22;
-    F.text(ctx, '⚙', gx, gy - u * 3.5, u, '#888899', 'center');
-    // segurar 3 segundos abre o portão dos pais
-    if (this.pointer && this.pointer.down && Math.abs(this.pointer.x - gx) < 28 && Math.abs(this.pointer.y - gy) < 28) {
-      this.gearHold = (this.gearHold || 0) + 1 / 60;
-      ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gx, gy, 20, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, this.gearHold / 3)); ctx.stroke();
-      if (this.gearHold >= 3) { this.gearHold = 0; this.pointer.down = false; this.wbOpenGate(() => { this.state = 'parent'; this.buttons = []; }); }
-    } else this.gearHold = 0;
-    if (!this.buttons.find((b) => b.id === 'gear')) this.buttons.push({ id: 'gear', x: gx - 24, y: gy - 24, w: 48, h: 48, fn: () => { this.toastMsg('PAIS: SEGURE 3 SEGUNDOS'); } });
+    // botao dos pais: um toque abre o PIN (antes era segurar 3 s, que falhava no celular)
+    this.drawButton('\u2699 PAIS', this.W - 52, 18 + u * 19 + 22, 92, () => this.wbOpenGate(() => { this.state = 'parent'; this.buttons = []; }), '#888899', 'gear');
   };
   G.renderMission = function () {
     const ctx = this.ctx, u = this.ui, cx = this.W / 2, m = C.missions[this.wb.missionIdx] || C.missions[0];

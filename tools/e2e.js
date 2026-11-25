@@ -180,14 +180,26 @@ const { spawn } = require('child_process');
     await wait(2800);
     const resumed = game.state;
     // portão parental
+    const key = (k) => { game.buttons = []; game.renderGate(); game.buttons.find((x) => x.id === 'k' + ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'APAGAR', '0', 'OK'].indexOf(k)).fn(); };
+    const type = (str) => { for (const ch of str) key(ch); };
+    game.save.wbCfg.pin = '';
     game.wbOpenGate(() => { game.state = 'parent'; game.buttons = []; });
-    const q = game.gate.a * game.gate.b; game.gate.answer = String(q);
-    const okBtn = { fn: null }; game.renderGate(); const b = game.buttons.find((x) => x.id === 'k11'); b.fn();
-    const parent = game.state;
+    const gateCreate = game.gate.mode; type('2580'); const gateConfirm = game.gate.mode; type('2580');
+    const parent = game.state, pinSaved = game.save.wbCfg.pin;
+    game.wbOpenGate(() => { game.state = 'parent'; game.buttons = []; });
+    const gatePin = game.gate.mode; type('1111'); const wrong = game.gate.wrong && game.state === 'gate'; type('2580'); const parent2 = game.state;
+    game.wbOpenGate(() => { game.state = 'parent'; game.buttons = []; });
+    game.buttons = []; game.renderGate(); game.buttons.find((x) => x.id === 'forgot').fn(); const gateMath = game.gate.mode;
+    type(String(game.gate.a * game.gate.b)); key('OK'); const gateAfterMath = game.gate.mode; type('4321'); type('4321');
+    const parent3 = game.state, pinNew = game.save.wbCfg.pin;
+    // desligar a missao durante a pausa libera o jogo
+    game.wb.status = 'break'; game.state = 'parent'; game.buttons = []; game.renderParentPanel(); game.buttons.find((x) => x.id === 'pe').fn();
+    const offUnlocked = { enabled: game.save.wbCfg.enabled, status: game.wb.status }; game.save.wbCfg.enabled = true;
+    const gate = { gateCreate, gateConfirm, pinSaved, gatePin, wrong, parent2, gateMath, gateAfterMath, parent3, pinNew, offUnlocked };
     // segundo ciclo do dia termina em "até amanhã"
     game.wb.cycles = 1; game.wb.status = 'break'; game.wb.missionStart = Date.now() - 16 * 60000; game.wbReturn(); await wait(50); game.wbHiFive(); await wait(2800); const night = { state: game.state, status: game.wb.status };
     game.wb.status = 'idle'; game.wb.cycles = 0;
-    return { warned, mission, breakState, insist, insistMax, stillBreak, reload, done, hifive, after, resumed, parent, night };
+    return { warned, mission, breakState, insist, insistMax, stillBreak, reload, done, hifive, after, resumed, parent, night, gate };
   });
   console.log('missão de brincar:', JSON.stringify(wb));
   await page.evaluate(() => { game.wb.status = 'mission'; game.wb.missionIdx = 0; game.state = 'mission'; game.buttons = []; }); await page.waitForTimeout(300);
@@ -280,6 +292,8 @@ const { spawn } = require('child_process');
   if (chefe.log.some((r) => r.inWall || !r.canMove)) { console.log('FALHA: jogador preso após golpe no chefe'); process.exit(1); }
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
   if (!wb.warned || wb.mission.state !== 'mission' || wb.breakState.state !== 'break' || wb.insist !== 1 || wb.insistMax !== 4 || wb.night.state !== 'goodnight' || wb.stillBreak !== 'break' || wb.reload !== 'break' || !wb.done || wb.hifive !== 'hifive' || wb.after.medals < 1 || wb.after.playSec !== 0 || wb.resumed !== 'levels' || wb.parent !== 'parent') { console.log('FALHA: missão de brincar'); process.exit(1); }
+  const g = wb.gate;
+  if (g.gateCreate !== 'create' || g.gateConfirm !== 'confirm' || g.pinSaved !== '2580' || g.gatePin !== 'pin' || !g.wrong || g.parent2 !== 'parent' || g.gateMath !== 'math' || g.gateAfterMath !== 'create' || g.parent3 !== 'parent' || g.pinNew !== '4321' || g.offUnlocked.enabled || g.offUnlocked.status !== 'idle') { console.log('FALHA: PIN dos pais', JSON.stringify(g)); process.exit(1); }
   if (derrota.stillDead !== 'dead' || derrota.after !== 'play') { console.log('FALHA: tela de derrota'); process.exit(1); }
   if (flechas.curtos !== 0 || flechas.morte.state !== 'dead' || flechas.morte.cause !== 'flecha' || flechas.vistas === 0 || flechas.dentroSolido !== 0) { console.log('FALHA: flechas'); process.exit(1); }
   if (itens.afterUse.inv !== 1 || itens.afterUse.shield !== 1 || itens.gain.coins !== 1 || itens.gain.score !== 30 || !itens.imune || itens.dur.coelho <= itens.dur.freeze0) { console.log('FALHA: itens'); process.exit(1); }
