@@ -210,7 +210,9 @@ const { spawn } = require('child_process');
     game.wb.status = 'idle'; game.goto('title'); game.buttons = []; game.renderTitle(); game.buttons.find((x) => x.id === 'tpais').fn();
     const titleGate = game.state; type('4321'); const titleParent = game.state;
     game.buttons = []; game.renderParentPanel(); game.buttons.find((x) => x.id === 'back').fn(); const titleBack = game.state;
-    const gate = { titleGate, titleParent, titleBack, gateCreate, gateConfirm, pinSaved, gatePin, wrong, parent2, gateMath, gateAfterMath, parent3, pinNew, offUnlocked };
+    const c0 = game.save.coins; game.state = 'parent'; game.buttons = []; game.renderParentPanel(); game.buttons.find((x) => x.id === 'pcoins').fn();
+    const coinsAdded = game.save.coins - c0, coinsSaved = JSON.parse(localStorage.getItem('tumba-da-mascara-save-v1')).coins - c0;
+    const gate = { coinsAdded, coinsSaved, titleGate, titleParent, titleBack, gateCreate, gateConfirm, pinSaved, gatePin, wrong, parent2, gateMath, gateAfterMath, parent3, pinNew, offUnlocked };
     // segundo ciclo do dia termina em "até amanhã"
     game.wb.cycles = 1; game.wb.status = 'break'; game.wb.missionStart = Date.now() - 16 * 60000; game.wbReturn(); await wait(50); game.wbHiFive(); await wait(2800); const night = { state: game.state, status: game.wb.status };
     game.wb.status = 'idle'; game.wb.cycles = 0;
@@ -308,7 +310,7 @@ const { spawn } = require('child_process');
   if (trap.safe !== 'play' || trap.after !== 'dead') { console.log('FALHA: espinhos retráteis'); process.exit(1); }
   if (!wb.warned || wb.mission.state !== 'mission' || wb.breakState.state !== 'break' || wb.insist !== 1 || wb.insistMax !== 4 || wb.night.state !== 'goodnight' || wb.stillBreak !== 'break' || wb.reload !== 'break' || !wb.done || wb.hifive !== 'hifive' || wb.after.medals < 1 || wb.after.playSec !== 0 || wb.resumed !== 'levels' || wb.parent !== 'parent') { console.log('FALHA: missão de brincar'); process.exit(1); }
   const g = wb.gate;
-  if (g.titleGate !== 'gate' || g.titleParent !== 'parent' || g.titleBack !== 'title' || g.gateCreate !== 'create' || g.gateConfirm !== 'confirm' || g.pinSaved !== '2580' || g.gatePin !== 'pin' || !g.wrong || g.parent2 !== 'parent' || g.gateMath !== 'math' || g.gateAfterMath !== 'create' || g.parent3 !== 'parent' || g.pinNew !== '4321' || g.offUnlocked.enabled || g.offUnlocked.status !== 'idle') { console.log('FALHA: PIN dos pais', JSON.stringify(g)); process.exit(1); }
+  if (g.coinsAdded !== 10000 || g.coinsSaved !== 10000 || g.titleGate !== 'gate' || g.titleParent !== 'parent' || g.titleBack !== 'title' || g.gateCreate !== 'create' || g.gateConfirm !== 'confirm' || g.pinSaved !== '2580' || g.gatePin !== 'pin' || !g.wrong || g.parent2 !== 'parent' || g.gateMath !== 'math' || g.gateAfterMath !== 'create' || g.parent3 !== 'parent' || g.pinNew !== '4321' || g.offUnlocked.enabled || g.offUnlocked.status !== 'idle') { console.log('FALHA: PIN dos pais', JSON.stringify(g)); process.exit(1); }
   if (derrota.stillDead !== 'dead' || derrota.after !== 'play') { console.log('FALHA: tela de derrota'); process.exit(1); }
   if (flechas.curtos !== 0 || flechas.morte.state !== 'dead' || flechas.morte.cause !== 'flecha' || flechas.vistas === 0 || flechas.dentroSolido !== 0) { console.log('FALHA: flechas'); process.exit(1); }
   if (itens.afterUse.inv !== 1 || itens.afterUse.shield !== 1 || itens.gain.coins !== 1 || itens.gain.score !== 30 || !itens.imune || itens.dur.coelho <= itens.dur.freeze0) { console.log('FALHA: itens'); process.exit(1); }

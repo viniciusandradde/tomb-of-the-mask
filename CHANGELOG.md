@@ -1,5 +1,8 @@
 # Histórico de versões
 
+## 1.9.1 — Moedas pela área dos pais
+- Botão "+10000 MOEDAS" no painel dos pais (protegido pelo PIN) para comprar máscaras e itens na loja.
+
 ## 1.9 — Chefão a cada 3 fases e jogo mais calmo
 - Cada mundo tem 12 fases: chefinhos nas fases 3, 6 e 9 (bebê, pequeno, grande) e o chefão do mundo na fase 12. 97 fases.
 - Dificuldade menor do Abismo em diante; chefões desses mundos e o Mestre mais brandos.
