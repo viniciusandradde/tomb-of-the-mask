@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 1.8.3 — Área dos pais com PIN
+- Botão "⚙ PAIS" visível nas telas da pausa (um toque) no lugar do toque longo de 3 s, que falhava no celular e impedia o
+  adulto de desligar o descanso.
+- PIN de 4 números criado na primeira vez, "esqueci o PIN" (soma de dois dígitos) e "trocar PIN" no painel.
+- Desligar a Missão de Brincar durante a pausa libera o jogo na hora.
+
 ## 1.8.2 — Padrão VSA de Bem-Estar Digital
 - "Aventuras por dia" passa a zerar à meia-noite do horário local (antes virava em UTC e, no Brasil, liberava novas aventuras às 21h).
 - Portão dos pais com soma de dois dígitos no lugar da tabuada simples.
