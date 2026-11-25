@@ -67,17 +67,17 @@ const { spawn } = require('child_process');
   await page.screenshot({ path: path.join(out, '3b-mapa.png') });
   const mapa = await page.evaluate(() => { const s0 = game.sel; game.save.unlocked = 12; game.mapMove(1); game.mapMove(1); return { antes: s0, depois: game.sel, thumbs: Object.keys(game.thumbs).length }; });
   console.log('mapa:', JSON.stringify(mapa));
-  await page.evaluate(() => { game.sel = 9; });
+  await page.evaluate(() => { game.sel = 11; });
   await page.waitForTimeout(600);
   await page.screenshot({ path: path.join(out, '3c-mapa-chefao.png') });
 
   // chefão: núcleo -> tonto -> bater; porta trancada até derrotar
   const chefe = await page.evaluate(async () => {
-    game.startLevel(9);
+    game.startLevel(11);
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await wait(300);
     const introState = game.state; game.skipBossIntro(); await wait(100);
-    const ex = LEVELS[9].rows[0].indexOf('E');
+    const ex = LEVELS[11].rows[0].indexOf('E');
     const lockedBefore = game.blocked(ex, 0);
     game.started = true;
     const log = [];
@@ -103,9 +103,20 @@ const { spawn } = require('child_process');
     return { introState, deathState, lockedBefore, lockedAfter: game.blocked(ex, 0), hp: game.boss.hp, dead: game.boss.dead, state: game.state, log };
   });
   console.log('chefão:', JSON.stringify(chefe));
+  // estrutura: chefão a cada 3 fases (três chefinhos do básico ao grande, e o chefão do mundo na fase 12)
+  const estrutura = await page.evaluate(() => {
+    const w0 = LEVELS.filter((L) => L.world === 0);
+    const bossPos = w0.map((L, i) => (L.boss ? i + 1 : 0)).filter(Boolean);
+    game.startLevel(2); game.skipBossIntro();
+    const mini = { name: game.boss.name, hp: game.boss.hp, attacks: game.boss.attacks.length };
+    game.goto('title');
+    return { porMundo: w0.length, bossPos, tiers: w0.filter((L) => L.boss).map((L) => L.boss.tier), mini, total: LEVELS.length };
+  });
+  console.log('estrutura:', JSON.stringify(estrutura));
+  if (estrutura.porMundo !== 12 || estrutura.bossPos.join() !== '3,6,9,12' || estrutura.tiers.join() !== '1,2,3,4' || estrutura.mini.attacks !== 1 || estrutura.mini.hp !== 2) { console.log('FALHA: estrutura de chefões'); process.exit(1); }
   await page.screenshot({ path: path.join(out, '4b-chefao.png') });
   // chefe ativo (nova instância) para a captura com vida cheia
-  await page.evaluate(() => { game.startLevel(80); });
+  await page.evaluate(() => { game.startLevel(LEVELS.length - 1); });
   await page.waitForTimeout(2200);
   await page.screenshot({ path: path.join(out, '4d-chefao-intro.png') });
   await page.evaluate(() => { game.skipBossIntro(); game.started = true; });

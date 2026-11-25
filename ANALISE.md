@@ -36,7 +36,7 @@ pwa/
   icons/                ícones 192/512 e "maskable" (gerados a partir da arte do Canva)
   assets/               fundos de cada mundo e arte de capa (Canva, plano gratuito)
   js/maze.js            GERADOR + VALIDADOR de fases (roda no navegador e no Node)
-  js/levels.js          80 fases pré-geradas (8 mundos x 10), todas validadas
+  js/levels.js          97 fases pré-geradas (8 mundos x 12 + Mestre), todas validadas
   js/font.js            fonte bitmap 5x7 desenhada pixel a pixel
   js/audio.js           efeitos sonoros e músicas 100% sintetizados (WebAudio)
   js/game.js            motor: física de deslize, inimigos, lava, HUD, menus, loja, arcade
@@ -131,7 +131,8 @@ congelar pausa o ciclo. Legenda no mapa: `t`.
   mais rápido, ataques mais frequentes, cor pulsante.
 - **Acalmou**: sequência de 3 s com brilhos em cadeia, tremor, flash, "ELE SE ACALMOU!", e então a porta abre e a música do
   mundo volta.
-- **Chefão no fim de cada mundo** (fase 10): arena aberta com um corredor largo no topo onde o chefe patrulha. A saída
+- **Chefão a cada 3 fases** (desde a 1.9): fases 3, 6 e 9 de cada mundo são chefinhos (BEBÊ: 2 de agitação, 1 tipo de ataque, 35% mais lento; PEQUENO: 2 e 2 ataques; GRANDE: 3 e 3 ataques) e a fase 12 é o chefão do mundo. Antes era só um chefão na fase 10.
+- **Arena do chefão**: arena aberta com um corredor largo no topo onde o chefe patrulha. A saída
   fica trancada (cadeado) até ele cair. O chefe solta tiros que caem e invoca morcegos. Para feri-lo, pegue o **núcleo
   azul** que aparece no labirinto: ele fica tonto por 6 s (olhos em X, piscando azul); leve a luz azul até ele, de
   levinho, para ele se acalmar um pouco. Tocar nele acordado perde. Agitação de 3 a 5 níveis conforme o mundo. Acalmá-lo dá 1000 pontos e abre a porta.
@@ -300,3 +301,12 @@ docker build -t tumba . && docker run -p 8080:8080 tumba
 - Novos fundos: coloque PNGs em `pwa/assets/src/` e rode `node tools/process-assets.js`.
 - Legenda do mapa: `#` parede, `.` ponto, `*` moeda, `x` espinho, `S` início, `E` saída,
   `b`/`v` morcego horizontal/vertical, `d u l r` armadilha que atira, `m` escudo, `f` congelar, `g` ímã.
+
+### 3.2.8 Ajuste de dificuldade (1.9)
+A pedido do pai, depois de testar com a criança: a partir do Abismo o jogo estava difícil demais e a lava/água causava
+angústia. Mudanças, válidas nos dois modos (Lúdico e Clássico continuam com a mesma dificuldade entre si):
+- Dificuldade efetiva dos mundos cresce normalmente até o Vulcão e com menos da metade da inclinação depois
+  (Abismo ~3,5 em vez de 4; Núcleo ~4,8 em vez de 7). Do Abismo em diante, no máximo 3 morcegos horizontais e 1 vertical.
+- Chefões do mundo mais brandos do Abismo em diante (agitação 4-5; Mestre 7 em vez de 10) e ataques mais espaçados.
+- Morcegos 2,2 células/s (era 3,2); flechas 5,5 células/s (era 9) e um tiro a cada 2,8 s (era 2,2).
+- Lava/água: 0,64 a 0,96 célula/s (era 1,2 a 2,5), começando 5 s depois do primeiro movimento (era 3 s).

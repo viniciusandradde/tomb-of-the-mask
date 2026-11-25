@@ -273,7 +273,7 @@
     ctx.strokeStyle = wd.color; ctx.lineWidth = 2; ctx.strokeRect(px + 1, py + 1, pw - 2, ph - 2);
     const unlocked = this.save.unlocked > idx;
     const small = Math.max(1, u - 1);
-    const title = L.boss ? (L.boss.master ? 'CHEFAO MESTRE: ' + L.boss.name : 'CHEFAO: ' + L.boss.name) : 'FASE ' + L.n + '  ' + wd.name;
+    const title = L.boss ? (L.boss.master ? 'CHEFAO MESTRE: ' + L.boss.name : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO: ' : 'CHEFAO: ') + L.boss.name) : 'FASE ' + L.n + '  ' + wd.name;
     F.text(ctx, title, px + 10, py + 5, Math.min(u, Math.floor((pw - 20) / (title.length * 6))), L.boss ? '#ff3b3b' : '#ffffff', 'left');
     // miniatura
     const th = this.thumb(idx);
