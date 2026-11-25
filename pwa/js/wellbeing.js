@@ -232,6 +232,7 @@
   G.wbOpenGate = function (after, mode) {
     const cfg = this.save.wbCfg;
     const [a, b] = this.pick(C.parentQuestions);
+    if (this.state !== 'title' && this.state !== 'gate' && this.state !== 'parent') this.parentFrom = null;
     this.gate = { mode: mode || (cfg.pin ? 'pin' : 'create'), a, b, answer: '', first: '', after, wrong: false };
     this.state = 'gate'; this.buttons = [];
   };
@@ -280,7 +281,7 @@
     });
     const bw = Math.min(this.W * 0.6, 220);
     if (g.mode === 'pin') this.drawButton('ESQUECI O PIN', cx, this.H - u * 7 - 18 - (u * 7 + 26), bw, () => { g.mode = 'math'; g.answer = ''; g.wrong = false; this.buttons = []; }, '#ffd23f', 'forgot');
-    this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, bw, () => { this.gate = null; this.state = this.wb.status === 'idle' ? 'settings' : 'break'; this.buttons = []; }, '#888899', 'back');
+    this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, bw, () => { this.gate = null; if (this.wb.status === 'idle' && this.parentFrom === 'title') { this.parentFrom = null; this.goto('title'); } else { this.state = this.wb.status === 'idle' ? 'settings' : 'break'; } this.buttons = []; }, '#888899', 'back');
   };
   G.renderParentPanel = function () {
     const ctx = this.ctx, u = this.ui, cx = this.W / 2, cfg = this.save.wbCfg, small = Math.max(1, u - 1);
@@ -305,7 +306,7 @@
     F.text(ctx, 'SBP / OMS / AAP: ATE 1 HORA DE TELA POR DIA DE 2 A 5 ANOS,', cx, this.H - u * 38, small, '#888899', 'center');
     F.text(ctx, 'COM ADULTO POR PERTO; NADA NA HORA DE DORMIR.', cx, this.H - u * 30, small, '#888899', 'center');
     F.text(ctx, 'O JOGO AVISA; QUEM CONDUZ A TRANSICAO E VOCE.', cx, this.H - u * 22, small, '#888899', 'center');
-    this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => { this.state = this.wb.status === 'idle' ? 'settings' : 'break'; this.buttons = []; }, '#888899', 'back');
+    this.drawButton('< VOLTAR', cx, this.H - u * 7 - 18, Math.min(this.W * 0.6, 220), () => { if (this.wb.status === 'idle' && this.parentFrom === 'title') { this.parentFrom = null; this.goto('title'); } else { this.state = this.wb.status === 'idle' ? 'settings' : 'break'; } this.buttons = []; }, '#888899', 'back');
   };
 
   // ------------------------------------------------------------------ desenho

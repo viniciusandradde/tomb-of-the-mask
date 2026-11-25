@@ -1493,6 +1493,8 @@
       this.drawButton('LOJA  $' + this.save.coins, cx, by + u * 32, w, () => this.goto('shop'), '#ffd23f', 't3');
       this.drawButton('⚙ OPCOES', cx, by + u * 48, w, () => this.goto('settings'), '#8cf5ff', 't4');
       this.drawButton(this.kids() ? '\u2665 MODO: LUDICO' : 'MODO: CLASSICO', cx, by + u * 64, w, () => { this.save.kids = !this.save.kids; Save.write(); this.buttons = []; if (this.save.kids) this.speak('Modo lúdico ligado!'); }, this.kids() ? '#ff4fa3' : '#888899', 't5');
+      // botao dos pais na tela inicial: um toque abre o PIN; ao voltar, retorna para ca
+      this.drawButton('\u2699 PAIS', this.W - 52, 24, 92, () => { this.parentFrom = 'title'; this.wbOpenGate(() => { this.state = 'parent'; this.buttons = []; }); }, '#888899', 'tpais');
       if (!this.audio.ready() && Math.floor(this.t * 2) % 2 === 0) F.text(ctx, '\u266A TOQUE PARA ATIVAR O SOM', cx, this.H - u * 27 - 12, Math.max(1, u - 1), '#ffd23f', 'center');
       if (this.drawStickerBoard && this.save.wbCfg && this.save.wbCfg.stickers && this.save.wbCfg.stickers.length) this.drawStickerBoard(cx, by + u * 76);
       F.text(ctx, 'RECORDE ARCADE ' + this.save.arcadeBest + '   FASES ' + Math.min(this.save.unlocked - 1, root.LEVELS.length) + '/' + root.LEVELS.length, cx, this.H - u * 9 - 8, Math.max(1, u - 1), '#888899', 'center');
