@@ -273,7 +273,7 @@
     ctx.strokeStyle = wd.color; ctx.lineWidth = 2; ctx.strokeRect(px + 1, py + 1, pw - 2, ph - 2);
     const unlocked = this.save.unlocked > idx;
     const small = Math.max(1, u - 1);
-    const title = L.boss ? (L.boss.master ? 'CHEFAO MESTRE: ' + L.boss.name : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO: ' : 'CHEFAO: ') + L.boss.name) : 'FASE ' + L.n + '  ' + wd.name;
+    const title = L.guardian ? 'LABIRINTO DO ' + L.guardian.name : L.boss ? (L.boss.master ? 'CHEFAO MESTRE: ' + L.boss.name : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO: ' : 'CHEFAO: ') + L.boss.name) : 'FASE ' + L.n + '  ' + wd.name;
     F.text(ctx, title, px + 10, py + 5, Math.min(u, Math.floor((pw - 20) / (title.length * 6))), L.boss ? '#ff3b3b' : '#ffffff', 'left');
     // miniatura
     const th = this.thumb(idx);
@@ -305,6 +305,7 @@
     hz.slice(0, 4).forEach(([type, n], i) => { const ix = tx + i * (is + 6 * small * 2.5); this.drawHazardIcon(type, ix, y, is); if (n) F.text(ctx, String(n), ix + is + 2, y + is / 2 - 3.5 * small, small, '#ffb0b0', 'left'); });
     y += is + 8;
     F.text(ctx, 'ALTURA ' + (L.rows.length - 2) + '   PAR ' + L.par + ' MOV', tx, y, small, '#888899', 'left'); y += lineH * 0.85;
+    if (L.guardian) { F.text(ctx, 'JUNTE AS ' + L.guardian.flowers + ' FLORES', tx, y, small, '#ff8c1a', 'left'); y += lineH * 0.7; F.text(ctx, 'E MEREÇA PASSAR PELA PORTA', tx, y, small, '#ffc76b', 'left'); }
     if (L.boss) { F.text(ctx, 'LUZ AZUL = CHEFE TONTO', tx, y, small, '#8cf5ff', 'left'); y += lineH * 0.7; F.text(ctx, 'ENTAO LEVE A LUZ ATE ELE!', tx, y, small, '#8cf5ff', 'left'); }
     else if (L.fluid) F.text(ctx, L.fluid.type === 'lava' ? 'A LAVA SOBE: NAO PARE!' : 'A AGUA SOBE: NAO PARE!', tx, y, small, '#ff6a1a', 'left');
     const ready = Math.abs(this.tokenProg - this.sel) <= 0.2;

@@ -248,7 +248,7 @@
       this.mode = 'stage';
       this.levelIndex = index;
       this.level = L;
-      this.world = root.WORLDS[L.world];
+      this.world = L.theme ? Object.assign({}, root.WORLDS[L.world], L.theme) : root.WORLDS[L.world];
       this.setupGrid(L.rows, L.fluid);
       if (L.boss) this.setupBoss(L.boss);
       this.audio.startMusic(L.boss ? (L.boss.master ? 9 : 8) : this.world.music);
@@ -258,6 +258,7 @@
       this.idleSince = null; this.hint = null; this.combo = 0;
       if (this.kids() && index === 0 && !this.spokeIntro) { this.spokeIntro = true; this.speak('Deslize o dedo para a máscara voar até a parede!'); }
       if (L.boss && this.startBossIntro) this.startBossIntro();
+      if (L.guardian && this.guardianStart) this.guardianStart();
     }
 
     startArcade() {
@@ -397,6 +398,7 @@
       // alvo: desliza até o próximo sólido (ignorando espinhos, que matam ao passar)
       let tx = p.cx, ty = p.cy;
       while (!this.blocked(tx + d[0], ty + d[1])) { tx += d[0]; ty += d[1]; if (Math.abs(tx - p.cx) + Math.abs(ty - p.cy) > 200) break; }
+      if (this.guardianLocked && this.guardianLocked() && this.grid.get(tx + d[0], ty + d[1]) === T.EXIT) this.guardianWarn();
       if (tx === p.cx && ty === p.cy) { this.bumpFx(d); return; }
       p.dir = d; p.face = d; p.moving = true; p.tx = tx; p.ty = ty; p.queued = null;
       p.stretch = 0; p.trailDist = FX.trailStep; // primeira cópia nasce já no primeiro passo
@@ -415,7 +417,7 @@
     // sólido para o deslize: paredes/atiradores e a porta da saída trancada pelo chefe
     blocked(x, y) {
       const c = this.grid.get(x, y);
-      return M.isSolid(c) || (c === T.EXIT && this.boss && this.boss.hp > 0);
+      return M.isSolid(c) || (c === T.EXIT && ((this.boss && this.boss.hp > 0) || (this.guardianLocked && this.guardianLocked())));
     }
     bossAlive() { return !!(this.boss && this.boss.hp > 0); }
 
@@ -758,7 +760,7 @@
       const wantLead = p.moving ? p.dir[1] * FX.camLead : 0;
       this.camLead = lerp(this.camLead, wantLead, 1 - Math.exp(-(p.moving ? 12 : 5) * dt));
       const target = p.y + this.camLead - this.viewRows() * 0.55;
-      const topPad = this.boss ? (this.ui * 7 + 22) / this.tile : 0;
+      const topPad = this.boss ? (this.ui * 7 + 22) / this.tile : (this.isGuardianLevel && this.isGuardianLevel()) ? (this.ui * 7 + 22) / this.tile + 2.2 : 0; // espaço para o guardião acima da porta
       const minCam = this.grid.minY - topPad, maxCam = this.grid.maxY + 1 - this.viewRows();
       if (this.mode === 'stage' && this.grid.maxY - this.grid.minY + 1 + topPad <= this.viewRows()) {
         // fase cabe inteira na tela: câmera fixa e centralizada
@@ -818,6 +820,7 @@
         this.levelCoins++; this.score += 100 * mult; this.save.coins += v; this.audio.coin();
         this.burst(x + 0.5, y + 0.5, 12, '#ffd23f', 2.5);
         this.toastMsg('+' + v + ' $');
+        if (this.isGuardianLevel && this.isGuardianLevel()) this.guardianFlower();
       } else if (c === T.SHIELD) { p.shield = 1; this.audio.powerup(); this.toastMsg('ESCUDO!'); this.burst(x + 0.5, y + 0.5, 10, '#8cf5ff', 2); }
       else if (c === T.FREEZE) { p.freeze = this.duration('freeze'); this.audio.powerup(); this.toastMsg('CONGELAR!'); this.burst(x + 0.5, y + 0.5, 10, '#ffffff', 2); }
       else if (c === T.ADDICT) { p.addict = this.duration('addict'); this.audio.powerup(); this.toastMsg('VICIADO EM MOEDAS!'); this.burst(x + 0.5, y + 0.5, 12, '#ffd23f', 2); }
@@ -866,7 +869,7 @@
       this.audio.win();
       this.burst(p.x, p.y, 30, '#ffd23f', 4);
       const idx = this.levelIndex;
-      const stars = this.levelCoins;
+      const stars = Math.min(3, this.levelCoins);
       this.save.stars[idx] = Math.max(this.save.stars[idx] || 0, stars);
       const timeBonus = Math.max(0, Math.round(300 - this.elapsed * 10));
       this.finalScore = this.score + timeBonus;
@@ -878,7 +881,8 @@
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
       if (this.wbMaybeWarn) setTimeout(() => this.wbMaybeWarn(), 900);
-      this.winTitle = this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
+      this.winTitle = this.level.guardian ? 'VOCE MERECEU PASSAR!' : this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
+      if (this.level.guardian && this.guardianWinLine) this.guardianWinLine();
       this.confetti = (this.kids() || this.level.boss) ? (this.level.boss && this.level.boss.master ? 3 : 1) : 0;
       if (this.level.boss && this.level.boss.supreme) { this.save.zerou = true; if (this.kids()) this.speak('Você acalmou a Máscara Suprema e zerou o jogo! Parabéns, campeão!'); }
       else if (this.level.boss && this.level.boss.master && this.kids()) this.speak('Muito bem! Agora a Máscara Mestre vai ficar mais forte. Vamos para o próximo nível!');
@@ -1023,10 +1027,10 @@
         const c = this.grid.get(x, y);
         const px = ox + x * s, py = oy + y * s;
         if (c === T.DOT) { const addict = this.player.addict > 0; const d = Math.max(2, Math.round(s * (addict ? 0.22 : 0.14))); ctx.fillStyle = addict ? '#ffd23f' : this.worldAtRow(y).accent; ctx.fillRect(px + (s - d) / 2, py + (s - d) / 2, d, d); }
-        else if (c === T.COIN) this.drawCoin(px, py, pulse);
+        else if (c === T.COIN) { if (this.isGuardianLevel && this.isGuardianLevel()) this.drawFlower(px, py, pulse); else this.drawCoin(px, py, pulse); }
         else if (c === T.SPIKE) this.drawSpike(px, py, x, y, 1, false);
         else if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); const st = tr ? this.trapState(tr) : { ext: 0 }; this.drawSpike(px, py, x, y, st.ext, st.warn, true); }
-        else if (c === T.EXIT) this.drawExit(px, py, pulse, this.bossAlive());
+        else if (c === T.EXIT) this.drawExit(px, py, pulse, this.bossAlive() || (this.guardianLocked && this.guardianLocked()));
         else if (c === T.SHIELD) this.drawPowerup(px, py, '#8cf5ff', 'S', pulse);
         else if (c === T.FREEZE) this.drawPowerup(px, py, '#ffffff', '*', pulse);
         else if (c === T.MAGNET) this.drawPowerup(px, py, '#ff4fa3', 'U', pulse);
@@ -1043,6 +1047,7 @@
       // morcegos
       for (const b of this.bats) this.drawBat(ox + b.x * s, oy + b.y * s, b, this.player.freeze > 0);
       if (this.boss) this.drawBoss(ox, oy);
+      if (this.drawGuardian) this.drawGuardian(ox, oy);
       // rastro + jogador
       const p = this.player;
       if (p.trail.length) {
@@ -1345,18 +1350,19 @@
     renderHud() {
       const ctx = this.ctx, u = this.ui, pad = 8;
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, this.W, u * 7 + pad * 2 + 4);
-      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.boss ? (this.level.boss.supreme ? 'SUPREMO' : this.level.boss.master ? 'MESTRE ' + this.level.boss.mlevel : 'CHEFAO') : 'FASE ' + this.level.n;
+      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.guardian ? 'GUARDIAO' : this.level.boss ? (this.level.boss.supreme ? 'SUPREMO' : this.level.boss.master ? 'MESTRE ' + this.level.boss.mlevel : 'CHEFAO') : 'FASE ' + this.level.n;
       F.text(ctx, label, pad, pad, u, this.world.accent, 'left');
       const sc = this.mode === 'arcade' ? this.arcadeScore() : this.score;
       F.text(ctx, String(sc).padStart(6, '0'), this.W / 2, pad, u, '#ffffff', 'center');
       // moedas da fase (estrelas)
       if (this.mode === 'stage') {
-        const stars = '*'.repeat(this.levelCoins) + '.'.repeat(Math.max(0, 3 - this.levelCoins));
+        const stars = '*'.repeat(Math.min(3, this.levelCoins)) + '.'.repeat(Math.max(0, 3 - this.levelCoins));
         F.text(ctx, stars, this.W / 2, pad + u * 8 + 2, Math.max(1, u - 1), '#ffd23f', 'center');
       } else {
         F.text(ctx, Math.floor(this.height) + 'M', this.W / 2, pad + u * 8 + 2, Math.max(1, u - 1), '#ffd23f', 'center');
       }
       if (this.boss && !this.boss.dead) this.drawBossHud();
+      if (this.drawGuardianHud) this.drawGuardianHud();
       // pausa
       this.buttons = this.buttons.filter((b) => b.id !== 'pause');
       const bw = u * 7 + pad;
@@ -1702,6 +1708,7 @@
       const tx = px + 24 + pw * 0.36, lineH = u * 7 + 4;
       let y = py + 12;
       const small = Math.max(1, u - 1);
+      if (L.guardian) { F.text(ctx, 'LABIRINTO DO GUARDIAO', tx, y, small, '#ff8c1a', 'left'); y += lineH * 0.8; F.text(ctx, 'JUNTE ' + L.guardian.flowers + ' FLORES PARA PASSAR', tx, y, small, '#ffffff', 'left'); }
       if (L.boss) { F.text(ctx, L.boss.supreme ? 'NIVEL SUPREMO' : L.boss.master ? 'MESTRE NIVEL ' + L.boss.mlevel + ' DE 5' : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO ' + L.boss.tier + ' DE 3' : 'CHEFAO DO MUNDO'), tx, y, small, '#ff3b3b', 'left'); y += lineH * 0.8; F.text(ctx, L.boss.name, tx, y, small, '#ffffff', 'left'); }
       else F.text(ctx, 'FASE ' + L.n, tx, y, u, '#ffffff', 'left');
       y += lineH;

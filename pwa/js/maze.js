@@ -402,6 +402,35 @@
   }
 
   // Comprimento do raio de cada atirador (células até o primeiro sólido)
+  // Fase do guardião: a porta fica trancada até juntar todas as flores (moedas '*').
+  // Com a porta trancada (saída vira parede), de QUALQUER parada alcançável todas as flores restantes
+  // precisam ser alcançáveis; depois de abertas, validate() já garante a saída de qualquer parada.
+  function guardianFair(rows) {
+    const locked = rows.map((r) => r.replace(T.EXIT, T.WALL));
+    const s = find(locked, T.SPAWN); if (!s) return { ok: false, reason: 'sem spawn' };
+    const coins = []; locked.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === T.COIN) coins.push(key(x, y)); });
+    const reach = (sx, sy) => {
+      const seen = new Set([key(sx, sy)]), touched = new Set([key(sx, sy)]), q = [[sx, sy]];
+      while (q.length) {
+        const [x, y] = q.shift();
+        for (const [dx, dy] of DIRS) {
+          const r = slide(locked, x, y, dx, dy);
+          if (r.dead || (r.x === x && r.y === y)) continue;
+          for (const [px, py] of r.path) touched.add(key(px, py));
+          const k = key(r.x, r.y); if (!seen.has(k)) { seen.add(k); q.push([r.x, r.y]); }
+        }
+      }
+      return { seen, touched };
+    };
+    const all = reach(s[0], s[1]);
+    for (const c of coins) if (!all.touched.has(c)) return { ok: false, reason: 'flor inalcançável' };
+    for (const k of all.seen) {
+      const x = k % 1000, y = Math.floor(k / 1000), r = reach(x, y);
+      for (const c of coins) if (!r.touched.has(c)) return { ok: false, reason: 'flor sem volta a partir de ' + x + ',' + y };
+    }
+    return { ok: true, stops: all.seen.size, flowers: coins.length };
+  }
+
   function shooterRays(rows) {
     const out = [];
     for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) {
@@ -581,5 +610,5 @@
     return true;
   }
 
-  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, shooterRays, lavaFeasible, find, key, toGrid, toRows };
+  return { T, SHOOTERS, DIRS, isSolid, isDeadly, rng, slide, solve, validate, mandatoryStops, generate, generateChunk, generateArena, arenaConnected, shooterRays, lavaFeasible, guardianFair, find, key, toGrid, toRows };
 });

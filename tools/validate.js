@@ -9,6 +9,7 @@ for (const L of self.LEVELS) {
   const w = L.rows[0].length;
   const shapeOk = L.rows.every((r) => r.length === w) && L.rows.join('').split('S').length === 2 && L.rows.join('').split('E').length === 2;
   if (L.boss && !Maze.arenaConnected(L.rows)) { bad++; console.log(`FASE ${L.n}: ARENA sem volta com a porta trancada`); }
+  if (L.guardian) { const gf = Maze.guardianFair(L.rows); const fl = (L.rows.join('').match(/\*/g) || []).length; if (!gf.ok || fl !== L.guardian.flowers) { bad++; console.log(`FASE ${L.n}: GUARDIAO ${gf.reason || 'flores=' + fl}`); } }
   if (L.fluid && !Maze.lavaFeasible(L.rows, L.fluid, { react: 0.5, margin: 2.5 }).ok) { bad++; console.log(`FASE ${L.n}: LAVA rápida demais para o caminho`); }
   if (!v.ok || !shapeOk) { bad++; console.log(`FASE ${L.n}: INVÁLIDA (${v.reason || 'formato'})${v.traps && v.traps.size ? ' armadilhas=' + v.traps.size : ''}`); }
 }

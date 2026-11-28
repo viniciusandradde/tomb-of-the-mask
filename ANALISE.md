@@ -302,6 +302,14 @@ docker build -t tumba . && docker run -p 8080:8080 tumba
 - Legenda do mapa: `#` parede, `.` ponto, `*` moeda, `x` espinho, `S` início, `E` saída,
   `b`/`v` morcego horizontal/vertical, `d u l r` armadilha que atira, `m` escudo, `f` congelar, `g` ímã.
 
+### 3.2.10 Labirinto do Guardião das Flores (1.11)
+Fase entre o Mestre 4 e a Máscara Suprema, pedida pelo pai com inspiração no clima do Dia dos Mortos. O personagem é
+ORIGINAL (não copia nenhum filme): cavaleiro-caveira de elmo prateado, coroa de flores de cempasúchil, capa verde-água e
+espada longa. Mecânica de "merecer passar": a porta fica trancada pela espada até a criança juntar as 5 flores; com 4 o
+jogo avisa quantas faltam se ela tentar a porta. Labirinto de 44 linhas, mínimo de 34 movimentos, 12 espinhos, 6 móveis,
+4 morcegos, 4 atiradores, sem lava (para não gerar angústia). Validação extra (`Maze.guardianFair`): com a porta
+trancada, de QUALQUER parada alcançável todas as flores continuam alcançáveis; depois de aberta, `validate` garante a saída.
+
 ### 3.2.9 Tumba do Mestre em 5 níveis (1.10)
 A Tumba do Mestre estava fácil demais depois do ajuste da 1.9. Agora são 5 lutas seguidas contra a Máscara Mestre:
 agitação 6, 7, 8, 9 e 11; velocidade de 3,0 a 4,4; intervalo entre ataques de 2,0 s a 1,1 s; morcegos de 5,5 s a 3,2 s;

@@ -24,6 +24,12 @@ const MASTER_LEVELS = [
   { name: 'MASCARA MESTRE 4', hp: 9, speed: 3.9, shot: 1.4, bats: 4.0 },
   { name: 'MASCARA SUPREMA', hp: 11, speed: 4.4, shot: 1.1, bats: 3.2, supreme: true },
 ].map((m, i) => Object.assign({ size: 3, master: true, mlevel: i + 1 }, m));
+// Antes da Suprema: o Labirinto do Guardião das Flores (personagem original, tema Dia dos Mortos).
+// Labirinto grande e difícil; a porta só abre depois de juntar as 5 flores ("merecer passar").
+const GUARDIAN = { name: 'GUARDIAO DAS FLORES', flowers: 5 };
+const GUARDIAN_THEME = { name: 'LABIRINTO DAS FLORES', color: '#ff8c1a', dark: '#3a1250', accent: '#ffc76b' };
+const GUARDIAN_PARAMS = { h: 44, wallDensity: 0.25, spikes: 12, traps: 6, bats: 3, vbats: 1, shooters: 4, coins: 5, shields: 1, freezes: 1, minMoves: 34, maxMoves: 140 };
+const MASTER_SEQ = [0, 1, 2, 3, 'guardian', 4]; // posição na Tumba do Mestre
 // Chefinhos: do básico (fase 3) ao mais forte (fase 9); a fase 12 é o chefão do mundo.
 const TIERS = [
   { suffix: 'BEBE', hp: 2, speed: 0.65, slow: 1.7, attacks: 1 },
@@ -88,15 +94,26 @@ function fluidFor(w, i) {
 const levels = [];
 let seedBase = 20260101;
 for (let w = 0; w < WORLDS.length; w++) {
-  const count = WORLDS[w].master ? MASTER_LEVELS.length : PER_WORLD;
+  const count = WORLDS[w].master ? MASTER_SEQ.length : PER_WORLD;
   for (let i = 0; i < count; i++) {
     const n = w * PER_WORLD + i + 1;
     let rows, moves, calibratedFluid = null;
+    if (WORLDS[w].master && MASTER_SEQ[i] === 'guardian') {
+      let result = null, seed = seedBase + n * 7919 + 900, tries = 0;
+      for (; tries < 400 && !result; tries++, seed += 29) {
+        const cand = Maze.generate(Object.assign({ seed }, GUARDIAN_PARAMS), Maze.rng(seed));
+        if (cand && Maze.guardianFair(cand.rows).ok) result = cand;
+      }
+      if (!result) throw new Error('Não consegui gerar o Labirinto do Guardião');
+      levels.push({ n, world: w, rows: result.rows, par: result.moves, fluid: null, guardian: GUARDIAN, theme: GUARDIAN_THEME });
+      process.stdout.write(`fase ${String(n).padStart(2)} mundo ${w + 1} GUARDIAO ${result.rows.length}x12 par=${result.moves} (tentativas ${tries})\n`);
+      continue;
+    }
     const isBoss = WORLDS[w].master || i % 3 === 2;
     if (isBoss) {
-      const boss = WORLDS[w].master ? MASTER_LEVELS[i] : bossFor(w, i);
+      const boss = WORLDS[w].master ? MASTER_LEVELS[MASTER_SEQ[i]] : bossFor(w, i);
       const ew = Math.round(eff(w)), small = boss.tier && boss.tier < 4;
-      const mx = boss.master ? Math.floor(i / 2) : 0; // arenas do Mestre ganham perigos a cada nível
+      const mx = boss.master ? Math.floor((boss.mlevel - 1) / 2) : 0; // arenas do Mestre ganham perigos a cada nível
       const p = { h: 16 + Math.min(ew, 4), wallDensity: 0.12 + ew * 0.006, spikes: small ? Math.min(2, Math.floor(ew / 2)) : Math.min(4, 1 + Math.floor(ew / 2)) + mx, traps: small ? Math.floor(ew / 3) : 1 + Math.floor(ew / 3) + mx, coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
       let result = null, seed = seedBase + n * 7919 + 500;
       for (let k = 0; k < 30 && !result; k++, seed += 17) result = Maze.generateArena(Object.assign({ seed }, p), Maze.rng(seed));
