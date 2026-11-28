@@ -302,6 +302,12 @@ docker build -t tumba . && docker run -p 8080:8080 tumba
 - Legenda do mapa: `#` parede, `.` ponto, `*` moeda, `x` espinho, `S` início, `E` saída,
   `b`/`v` morcego horizontal/vertical, `d u l r` armadilha que atira, `m` escudo, `f` congelar, `g` ímã.
 
+### 3.2.9 Tumba do Mestre em 5 níveis (1.10)
+A Tumba do Mestre estava fácil demais depois do ajuste da 1.9. Agora são 5 lutas seguidas contra a Máscara Mestre:
+agitação 6, 7, 8, 9 e 11; velocidade de 3,0 a 4,4; intervalo entre ataques de 2,0 s a 1,1 s; morcegos de 5,5 s a 3,2 s;
+arenas ganham um espinho e um espinho móvel a cada dois níveis. Todos usam os 7 tipos de ataque. O 5º nível é a Máscara
+Suprema (roxa com coroa dourada) e é o único que marca o jogo como zerado.
+
 ### 3.2.8 Ajuste de dificuldade (1.9)
 A pedido do pai, depois de testar com a criança: a partir do Abismo o jogo estava difícil demais e a lava/água causava
 angústia. Mudanças, válidas nos dois modos (Lúdico e Clássico continuam com a mesma dificuldade entre si):

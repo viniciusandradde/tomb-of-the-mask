@@ -16,7 +16,14 @@ const BOSSES = [
   { name: 'REI DAS SOMBRAS', short: 'SOMBRA', hp: 5, speed: 2.9, shot: 2.1, bats: 6, size: 3 },
   { name: 'CORACAO DO NUCLEO', short: 'NUCLEO', hp: 5, speed: 3.0, shot: 2.0, bats: 6, size: 3 },
 ];
-const MASTER = { name: 'MASCARA MESTRE', hp: 7, speed: 3.3, shot: 1.8, bats: 5, size: 3, master: true };
+// Tumba do Mestre: 5 níveis seguidos contra a Máscara Mestre, cada vez mais difícil, terminando no Nível Supremo.
+const MASTER_LEVELS = [
+  { name: 'MASCARA MESTRE 1', hp: 6, speed: 3.0, shot: 2.0, bats: 5.5 },
+  { name: 'MASCARA MESTRE 2', hp: 7, speed: 3.3, shot: 1.8, bats: 5.0 },
+  { name: 'MASCARA MESTRE 3', hp: 8, speed: 3.6, shot: 1.6, bats: 4.5 },
+  { name: 'MASCARA MESTRE 4', hp: 9, speed: 3.9, shot: 1.4, bats: 4.0 },
+  { name: 'MASCARA SUPREMA', hp: 11, speed: 4.4, shot: 1.1, bats: 3.2, supreme: true },
+].map((m, i) => Object.assign({ size: 3, master: true, mlevel: i + 1 }, m));
 // Chefinhos: do básico (fase 3) ao mais forte (fase 9); a fase 12 é o chefão do mundo.
 const TIERS = [
   { suffix: 'BEBE', hp: 2, speed: 0.65, slow: 1.7, attacks: 1 },
@@ -81,15 +88,16 @@ function fluidFor(w, i) {
 const levels = [];
 let seedBase = 20260101;
 for (let w = 0; w < WORLDS.length; w++) {
-  const count = WORLDS[w].master ? 1 : PER_WORLD;
+  const count = WORLDS[w].master ? MASTER_LEVELS.length : PER_WORLD;
   for (let i = 0; i < count; i++) {
     const n = w * PER_WORLD + i + 1;
     let rows, moves, calibratedFluid = null;
     const isBoss = WORLDS[w].master || i % 3 === 2;
     if (isBoss) {
-      const boss = WORLDS[w].master ? MASTER : bossFor(w, i);
+      const boss = WORLDS[w].master ? MASTER_LEVELS[i] : bossFor(w, i);
       const ew = Math.round(eff(w)), small = boss.tier && boss.tier < 4;
-      const p = { h: 16 + Math.min(ew, 4), wallDensity: 0.12 + ew * 0.006, spikes: small ? Math.min(2, Math.floor(ew / 2)) : Math.min(4, 1 + Math.floor(ew / 2)), traps: small ? Math.floor(ew / 3) : 1 + Math.floor(ew / 3), coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
+      const mx = boss.master ? Math.floor(i / 2) : 0; // arenas do Mestre ganham perigos a cada nível
+      const p = { h: 16 + Math.min(ew, 4), wallDensity: 0.12 + ew * 0.006, spikes: small ? Math.min(2, Math.floor(ew / 2)) : Math.min(4, 1 + Math.floor(ew / 2)) + mx, traps: small ? Math.floor(ew / 3) : 1 + Math.floor(ew / 3) + mx, coins: 3, bats: 0, vbats: 0, shooters: 0, minMoves: 5, maxMoves: 60 };
       let result = null, seed = seedBase + n * 7919 + 500;
       for (let k = 0; k < 30 && !result; k++, seed += 17) result = Maze.generateArena(Object.assign({ seed }, p), Maze.rng(seed));
       if (!result) throw new Error('Não consegui gerar a arena ' + n);

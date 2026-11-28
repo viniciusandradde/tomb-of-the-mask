@@ -113,6 +113,17 @@ const { spawn } = require('child_process');
     return { porMundo: w0.length, bossPos, tiers: w0.filter((L) => L.boss).map((L) => L.boss.tier), mini, total: LEVELS.length };
   });
   console.log('estrutura:', JSON.stringify(estrutura));
+  // Tumba do Mestre: 5 níveis cada vez mais difíceis; só o Nível Supremo zera o jogo
+  const mestre = await page.evaluate(() => {
+    const m = LEVELS.filter((L) => L.world === WORLDS.length - 1);
+    const zer = [];
+    for (const L of m) { const idx = LEVELS.indexOf(L); game.save.zerou = false; game.startLevel(idx); game.skipBossIntro(); game.winLevel(); zer.push(!!game.save.zerou); }
+    game.save.zerou = false; game.goto('title');
+    return { niveis: m.length, hp: m.map((L) => L.boss.hp), shot: m.map((L) => L.boss.shot), supreme: m.map((L) => !!L.boss.supreme), zer };
+  });
+  console.log('mestre:', JSON.stringify(mestre));
+  const crescente = (a, dir) => a.every((v, i) => i === 0 || (dir > 0 ? v > a[i - 1] : v < a[i - 1]));
+  if (mestre.niveis !== 5 || !crescente(mestre.hp, 1) || !crescente(mestre.shot, -1) || mestre.supreme.join() !== 'false,false,false,false,true' || mestre.zer.join() !== 'false,false,false,false,true') { console.log('FALHA: Tumba do Mestre'); process.exit(1); }
   if (estrutura.porMundo !== 12 || estrutura.bossPos.join() !== '3,6,9,12' || estrutura.tiers.join() !== '1,2,3,4' || estrutura.mini.attacks !== 1 || estrutura.mini.hp !== 2) { console.log('FALHA: estrutura de chefões'); process.exit(1); }
   await page.screenshot({ path: path.join(out, '4b-chefao.png') });
   // chefe ativo (nova instância) para a captura com vida cheia
