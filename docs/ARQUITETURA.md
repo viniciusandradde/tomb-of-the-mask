@@ -11,7 +11,8 @@ pwa/
   sw.js                 service worker (cache offline; CACHE = 'tumba-vN', incremente ao publicar)
   icons/, assets/       ícones e fundos (gerados com IA no Canva; assets/src = originais 112x199 e 200x200)
   js/maze.js            gerador e solver de labirintos (UMD: navegador e Node)
-  js/levels.js          101 fases geradas por tools/build-levels.js (NÃO editar à mão)
+  js/guardian.js        Labirinto do Guardião das Flores (porta trancada até juntar 5 flores)
+  js/levels.js          102 fases geradas por tools/build-levels.js (NÃO editar à mão)
   js/font.js            fonte bitmap 5x7 (PixelFont.text/width/normalize)
   js/audio.js           AudioEngine: efeitos e músicas sintetizados (WebAudio), destravamento iOS
   js/game.js            classe Game: estados, física, inimigos, HUD, menus, opções, salvamento
@@ -73,6 +74,6 @@ Botões são registrados a cada quadro em `this.buttons` (id, x, y, w, h, fn) e 
   mestre, 99 = menu).
 
 ## Testes e publicação
-- `npm run validate` (101/101 fases), `node --check pwa/js/*.js`, `npm run test:e2e` (Playwright; precisa de Chromium).
+- `npm run validate` (102/102 fases), `node --check pwa/js/*.js`, `npm run test:e2e` (Playwright; precisa de Chromium).
 - Publicar: push em `master` → workflow "Publicar no GitHub Pages". Incremente `CACHE` em `sw.js` para forçar atualização
   nos aparelhos instalados.

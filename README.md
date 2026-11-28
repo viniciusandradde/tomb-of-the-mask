@@ -20,7 +20,7 @@ Sem instalar nada além do Node. Também há `Dockerfile` e um workflow de GitHu
 
 ## Conteúdo
 
-- 101 fases em 9 mundos (12 por mundo, com chefão a cada 3 fases: três chefinhos e o chefão do mundo; a Tumba do Mestre tem 5 níveis da Máscara Mestre, terminando no Nível Supremo) (Catacumba, Cripta Azul, Selva Perdida, Vulcão, Abismo, Templo Dourado, Sombras, Núcleo), todas validadas por um solver: saída e coletáveis sempre alcançáveis e **nenhum beco sem saída** (de qualquer parada, a saída continua alcançável).
+- 102 fases em 9 mundos (12 por mundo, com chefão a cada 3 fases: três chefinhos e o chefão do mundo; a Tumba do Mestre tem 5 níveis da Máscara Mestre, e, antes do Nível Supremo, o Labirinto do Guardião das Flores) (Catacumba, Cripta Azul, Selva Perdida, Vulcão, Abismo, Templo Dourado, Sombras, Núcleo), todas validadas por um solver: saída e coletáveis sempre alcançáveis e **nenhum beco sem saída** (de qualquer parada, a saída continua alcançável).
 - Mapa de mundo estilo Super Mario World (terreno, caminho de pedra, portas, tochas, decorações por mundo, personagem caminhando) com prévia de cada fase; chefões únicos com entrada cinematográfica e ataques telegrafados em fases; Chefão Mestre final para zerar o jogo.
 - Espinhos retráteis que saem dos blocos em ciclos, como no original.
 - Modo Arcade: coluna infinita para cima com espaço aberto, obstáculos e uma barreira piscante na cor do trecho que sobe em velocidade média. Encostou, perdeu.
@@ -37,7 +37,7 @@ Controles: deslizar na tela, ou setas / WASD no teclado. `P` pausa, `R` reinicia
 | Comando | O que faz |
 |---|---|
 | `npm start` | servidor estático na porta 8080 |
-| `npm run build:levels` | regenera as 101 fases (`pwa/js/levels.js`) |
+| `npm run build:levels` | regenera as 102 fases (`pwa/js/levels.js`) |
 | `npm run validate` | verifica que todas as fases são solucionáveis |
 | `node tools/process-assets.js` | converte as artes em `pwa/assets/src` em fundos e ícones |
 | `npm run test:e2e` | teste de fumaça com Playwright (joga a fase 1 com o solver) |

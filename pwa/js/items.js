@@ -26,7 +26,7 @@
     { id: 'rei', name: 'REI', color: '#f5c542', eye: '#4a3a00', cost: 2000, level: 48, coin: 100, boost: 30, desc: 'MOEDAS X2  +30% MULTIPLICADOR' },
     { id: 'sombra', name: 'SOMBRA', color: '#b04cff', eye: '#eaffff', cost: 2500, level: 60, slowBats: true, immune: 'trap', desc: 'MORCEGOS LENTOS  IMUNE A ESP. MOVEIS' },
     { id: 'sonequinha', name: 'SONEQUINHA', color: '#c9b8ff', eye: '#3a2a6a', cost: 0, level: 1, stickers: 5, freeze: 20, desc: 'PREMIO: 5 MISSOES DE BRINCAR. +20% CONGELAR' },
-    { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 101, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU: +50% EM TUDO E ESCUDO INICIAL' },
+    { id: 'mestre', name: 'MESTRE', color: '#ffffff', eye: '#ff3b3b', cost: 0, level: 102, zerou: true, coin: 50, magnet: 50, freeze: 50, addict: 50, boost: 50, startShield: true, desc: 'ZEROU: +50% EM TUDO E ESCUDO INICIAL' },
   ];
   root.MASKS = MASKS;
 

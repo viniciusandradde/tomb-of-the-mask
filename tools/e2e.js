@@ -115,13 +115,31 @@ const { spawn } = require('child_process');
   console.log('estrutura:', JSON.stringify(estrutura));
   // Tumba do Mestre: 5 níveis cada vez mais difíceis; só o Nível Supremo zera o jogo
   const mestre = await page.evaluate(() => {
-    const m = LEVELS.filter((L) => L.world === WORLDS.length - 1);
+    const m = LEVELS.filter((L) => L.world === WORLDS.length - 1 && L.boss);
     const zer = [];
     for (const L of m) { const idx = LEVELS.indexOf(L); game.save.zerou = false; game.startLevel(idx); game.skipBossIntro(); game.winLevel(); zer.push(!!game.save.zerou); }
     game.save.zerou = false; game.goto('title');
     return { niveis: m.length, hp: m.map((L) => L.boss.hp), shot: m.map((L) => L.boss.shot), supreme: m.map((L) => !!L.boss.supreme), zer };
   });
   console.log('mestre:', JSON.stringify(mestre));
+  // Labirinto do Guardião: porta trancada até juntar as 5 flores, depois abre e vence a fase
+  const guardiao = await page.evaluate(() => {
+    const idx = LEVELS.findIndex((L) => L.guardian), L = LEVELS[idx];
+    const nextIsSupreme = !!(LEVELS[idx + 1] && LEVELS[idx + 1].boss && LEVELS[idx + 1].boss.supreme), prevIsMaster4 = LEVELS[idx - 1].boss && LEVELS[idx - 1].boss.mlevel === 4;
+    game.startLevel(idx); game.started = true;
+    const ex = L.rows[0].indexOf('E');
+    const lockedStart = game.blocked(ex, 0);
+    const flowers = []; game.grid.rows.forEach((r, y) => r.forEach((c, x) => { if (c === '*') flowers.push([x, y]); }));
+    for (const [x, y] of flowers.slice(0, -1)) game.enterCell(x, y);
+    const lockedAt4 = game.blocked(ex, 0), toast4 = game.toast && game.toast.text;
+    const [lx, ly] = flowers[flowers.length - 1]; game.enterCell(lx, ly);
+    const openAt5 = !game.blocked(ex, 0);
+    game.enterCell(ex, 0);
+    const res = { flores: flowers.length, linhas: L.rows.length, par: L.par, nextIsSupreme, prevIsMaster4, lockedStart, lockedAt4, toast4, openAt5, state: game.state, title: game.winTitle, stars: game.save.stars[idx] };
+    game.goto('title'); return res;
+  });
+  console.log('guardião:', JSON.stringify(guardiao));
+  if (guardiao.flores !== 5 || !guardiao.nextIsSupreme || !guardiao.prevIsMaster4 || !guardiao.lockedStart || !guardiao.lockedAt4 || !guardiao.openAt5 || guardiao.state !== 'win' || guardiao.title !== 'VOCE MERECEU PASSAR!' || guardiao.stars > 3) { console.log('FALHA: Labirinto do Guardião'); process.exit(1); }
   const crescente = (a, dir) => a.every((v, i) => i === 0 || (dir > 0 ? v > a[i - 1] : v < a[i - 1]));
   if (mestre.niveis !== 5 || !crescente(mestre.hp, 1) || !crescente(mestre.shot, -1) || mestre.supreme.join() !== 'false,false,false,false,true' || mestre.zer.join() !== 'false,false,false,false,true') { console.log('FALHA: Tumba do Mestre'); process.exit(1); }
   if (estrutura.porMundo !== 12 || estrutura.bossPos.join() !== '3,6,9,12' || estrutura.tiers.join() !== '1,2,3,4' || estrutura.mini.attacks !== 1 || estrutura.mini.hp !== 2) { console.log('FALHA: estrutura de chefões'); process.exit(1); }

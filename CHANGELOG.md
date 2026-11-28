@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## 1.11 — Labirinto do Guardião das Flores
+- Nova fase antes da Máscara Suprema: labirinto grande e difícil com um guardião original (cavaleiro-caveira com coroa de flores e espada) que só deixa passar quem junta as 5 flores. 102 fases.
+- Validador garante que, com a porta trancada, as flores nunca ficam fora de alcance.
+
 ## 1.10 — Tumba do Mestre com 5 níveis
 - A Máscara Mestre agora tem 5 níveis seguidos, cada um mais difícil; o último é o Nível Supremo (Máscara Suprema), que zera o jogo. 101 fases.
 - Avisos do chefão falam em "luz azul" em todo lugar.
