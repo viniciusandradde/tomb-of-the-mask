@@ -435,7 +435,7 @@
       };
       this.coreCands = cands;
       this.core = null;
-      this.toastMsg('PEGUE O NUCLEO AZUL!');
+      this.toastMsg('PEGUE A LUZ AZUL!');
       if (this.kids()) this.speak('Cuidado, é o chefão! Pegue a luz azul para deixar ele tonto, depois leve a luz até ele, bem de levinho, para ele se acalmar!');
     }
     spawnCore() {
@@ -880,7 +880,8 @@
       if (this.wbMaybeWarn) setTimeout(() => this.wbMaybeWarn(), 900);
       this.winTitle = this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
       this.confetti = (this.kids() || this.level.boss) ? (this.level.boss && this.level.boss.master ? 3 : 1) : 0;
-      if (this.level.boss && this.level.boss.master) { this.save.zerou = true; if (this.kids()) this.speak('Você zerou o jogo! Parabéns, campeão!'); }
+      if (this.level.boss && this.level.boss.supreme) { this.save.zerou = true; if (this.kids()) this.speak('Você acalmou a Máscara Suprema e zerou o jogo! Parabéns, campeão!'); }
+      else if (this.level.boss && this.level.boss.master && this.kids()) this.speak('Muito bem! Agora a Máscara Mestre vai ficar mais forte. Vamos para o próximo nível!');
       if (this.kids()) this.speak(this.pick(ELOGIOS) + (stars === 3 ? ' Três estrelas!' : stars === 0 ? ' Tente pegar as estrelas douradas!' : ''));
     }
     restart() { if (this.wbCheckpoint && this.wbCheckpoint()) return; if (this.mode === 'arcade') this.startArcade(); else this.startLevel(this.levelIndex); }
@@ -1344,7 +1345,7 @@
     renderHud() {
       const ctx = this.ctx, u = this.ui, pad = 8;
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, this.W, u * 7 + pad * 2 + 4);
-      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.boss ? (this.level.boss.master ? 'MESTRE' : 'CHEFAO') : 'FASE ' + this.level.n;
+      const label = this.mode === 'arcade' ? 'ARCADE ' + this.world.name.split(' ')[0] : this.level.boss ? (this.level.boss.supreme ? 'SUPREMO' : this.level.boss.master ? 'MESTRE ' + this.level.boss.mlevel : 'CHEFAO') : 'FASE ' + this.level.n;
       F.text(ctx, label, pad, pad, u, this.world.accent, 'left');
       const sc = this.mode === 'arcade' ? this.arcadeScore() : this.score;
       F.text(ctx, String(sc).padStart(6, '0'), this.W / 2, pad, u, '#ffffff', 'center');
@@ -1428,7 +1429,7 @@
       const kids = this.kids();
       F.text(this.ctx, kids ? 'OPA!' : 'OPA, PERDEU!', cx, cy - u * 20, u * 2, kids ? '#ffd23f' : '#ff3b3b', 'center', { shadow: kids ? '#7a3a00' : '#400' });
       const causes = kids
-        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA ENCOSTOU EM VOCE', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU', chefao: 'O CHEFAO TE PEGOU! PEGUE O NUCLEO AZUL PRIMEIRO' }
+        ? { espinho: 'CUIDADO COM OS ESPINHOS', morcego: 'O MORCEGO TE PEGOU', flecha: 'A FLECHA ENCOSTOU EM VOCE', lava: 'A LAVA CHEGOU PERTO', agua: 'A AGUA SUBIU', barreira: 'A BARREIRA TE ALCANCOU', chefao: 'O CHEFAO TE PEGOU! PEGUE A LUZ AZUL PRIMEIRO' }
         : { espinho: 'ESPINHOS!', morcego: 'UM MORCEGO TE PEGOU', flecha: 'A FLECHA TE PEGOU', lava: 'A LAVA TE ALCANCOU', agua: 'VOCE SE AFOGOU', barreira: 'A BARREIRA TE PEGOU', chefao: 'O CHEFAO TE PEGOU' };
       F.text(this.ctx, causes[this.deathCause] || '', cx, cy - u * 2, u, '#ffffff', 'center');
       if (kids) F.text(this.ctx, (this.deathMsg || '').toUpperCase().replace(/[.!]/g, ''), cx, cy + u * 6, Math.max(1, u - 1), '#8cf5ff', 'center');
@@ -1443,8 +1444,8 @@
       if (k < 0.3) return;
       const u = this.ui, cx = this.W / 2, cy = this.H / 2;
       const bossWin = !!this.level.boss;
-      F.text(this.ctx, bossWin ? (this.level.boss.master ? 'CHEFAO MESTRE' : 'CHEFAO ' + this.level.boss.name) : 'FASE ' + this.level.n, cx, cy - u * 44, Math.max(1, bossWin ? u - 1 : u), this.world.accent, 'center');
-      const title = bossWin ? (this.level.boss.master ? 'VOCE ZEROU!' : 'ELE SE ACALMOU!') : (this.winTitle || 'COMPLETA!');
+      F.text(this.ctx, bossWin ? (this.level.boss.supreme ? 'NIVEL SUPREMO' : this.level.boss.master ? 'MESTRE NIVEL ' + this.level.boss.mlevel + ' DE 5' : 'CHEFAO ' + this.level.boss.name) : 'FASE ' + this.level.n, cx, cy - u * 44, Math.max(1, bossWin ? u - 1 : u), this.world.accent, 'center');
+      const title = bossWin ? (this.level.boss.supreme ? 'VOCE ZEROU!' : 'ELE SE ACALMOU!') : (this.winTitle || 'COMPLETA!');
       F.text(this.ctx, title, cx, cy - u * 32, u * 2, bossWin ? '#ffd23f' : '#ffffff', 'center', { shadow: this.world.color });
       // estrelas animadas
       for (let i = 0; i < 3; i++) {
@@ -1553,7 +1554,7 @@
         this.drawWall(x + 8, y + (h - this.tile) / 2, 0, 0, unlocked ? wd : { color: '#333344' }); this.tile = save; void s;
         F.text(ctx, (i + 1) + '. ' + wd.name, x + 48, y + 9, u, unlocked ? '#ffffff' : '#555566', 'left');
         const lv = this.worldLevels(i); let stars = 0; for (const idx of lv) stars += this.save.stars[idx] || 0;
-        F.text(ctx, unlocked ? '* ' + stars + '/' + lv.length * 3 + (wd.master ? '  CHEFAO FINAL' : '  8 FASES + 4 CHEFOES') : 'BLOQUEADO', x + 48, y + 9 + u * 8, Math.max(1, u - 1), unlocked ? '#ffd23f' : '#555566', 'left');
+        F.text(ctx, unlocked ? '* ' + stars + '/' + lv.length * 3 + (wd.master ? '  5 NIVEIS DO MESTRE' : '  8 FASES + 4 CHEFOES') : 'BLOQUEADO', x + 48, y + 9 + u * 8, Math.max(1, u - 1), unlocked ? '#ffd23f' : '#555566', 'left');
         if (wd.fluid) F.text(ctx, wd.fluid === 'lava' ? 'LAVA' : 'AGUA', x + w - 10, y + 9, Math.max(1, u - 1), wd.fluid === 'lava' ? '#ff6a1a' : '#8cf5ff', 'right');
         if (unlocked && !this.buttons.find((b) => b.id === 'w' + i)) this.buttons.push({ id: 'w' + i, x, y, w, h, fn: () => { this.worldPage = i; this.goto('levels'); } });
       });
@@ -1701,7 +1702,7 @@
       const tx = px + 24 + pw * 0.36, lineH = u * 7 + 4;
       let y = py + 12;
       const small = Math.max(1, u - 1);
-      if (L.boss) { F.text(ctx, L.boss.master ? 'CHEFAO MESTRE' : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO ' + L.boss.tier + ' DE 3' : 'CHEFAO DO MUNDO'), tx, y, small, '#ff3b3b', 'left'); y += lineH * 0.8; F.text(ctx, L.boss.name, tx, y, small, '#ffffff', 'left'); }
+      if (L.boss) { F.text(ctx, L.boss.supreme ? 'NIVEL SUPREMO' : L.boss.master ? 'MESTRE NIVEL ' + L.boss.mlevel + ' DE 5' : (L.boss.tier && L.boss.tier < 4 ? 'CHEFINHO ' + L.boss.tier + ' DE 3' : 'CHEFAO DO MUNDO'), tx, y, small, '#ff3b3b', 'left'); y += lineH * 0.8; F.text(ctx, L.boss.name, tx, y, small, '#ffffff', 'left'); }
       else F.text(ctx, 'FASE ' + L.n, tx, y, u, '#ffffff', 'left');
       y += lineH;
       if (!unlocked) { F.text(ctx, 'BLOQUEADA', tx, y, small, '#ff3b3b', 'left'); y += lineH; F.text(ctx, 'COMPLETE A ANTERIOR', tx, y, small, '#888899', 'left'); return; }

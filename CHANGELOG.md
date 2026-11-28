@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## 1.10 — Tumba do Mestre com 5 níveis
+- A Máscara Mestre agora tem 5 níveis seguidos, cada um mais difícil; o último é o Nível Supremo (Máscara Suprema), que zera o jogo. 101 fases.
+- Avisos do chefão falam em "luz azul" em todo lugar.
+
 ## 1.9.1 — Moedas pela área dos pais
 - Botão "+10000 MOEDAS" no painel dos pais (protegido pelo PIN) para comprar máscaras e itens na loja.
 

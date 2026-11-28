@@ -38,8 +38,8 @@
     }
     const w = this.level.world;
     this.boss = {
-      name: def.name, hp: def.hp, maxHp: def.hp, speed: def.speed, period: def.shot, batEvery: def.bats, size: def.size || 3, master: !!def.master,
-      look: def.master ? 'master' : LOOKS[w % LOOKS.length], attacks: def.master ? MASTER_ATTACKS : ATTACKS[w % ATTACKS.length].slice(0, def.attacks || 99), attackIdx: 0,
+      name: def.name, hp: def.hp, maxHp: def.hp, speed: def.speed, period: def.shot, batEvery: def.bats, size: def.size || 3, master: !!def.master, supreme: !!def.supreme, mlevel: def.mlevel || 0,
+      look: def.supreme ? 'supreme' : def.master ? 'master' : LOOKS[w % LOOKS.length], attacks: def.master ? MASTER_ATTACKS : ATTACKS[w % ATTACKS.length].slice(0, def.attacks || 99), attackIdx: 0,
       x: COLS / 2, y: 2.5, homeY: 2.5, dir: 1, stun: 0, hitCd: 0, timer: 2.2, coreTimer: 0.8, dead: false, deathT: 0, phase: 0, flash: 0,
       pending: null, slam: null, dark: 0, enraged: false, shakeT: 0,
     };
@@ -60,7 +60,7 @@
     this.state = 'play'; this.buttons = []; this.lastFrame = performance.now() / 1000; this.cine = null;
     this.boss.y = this.boss.homeY;
     this.audio.startMusic(this.boss.master ? 9 : 8);
-    this.toastMsg('PEGUE O NUCLEO AZUL!');
+    this.toastMsg('PEGUE A LUZ AZUL!');
   };
   G.bossRoar = function () {
     if (this.save.shake) this.shake = 0.5;
@@ -112,8 +112,8 @@
       } else {
         const k = clamp((c.t - 1.6) / 0.3, 0, 1);
         ctx.fillStyle = rgba(this.world.color, 0.35); ctx.fillRect(0, H * 0.4, W, u * 24);
-        F.text(ctx, b.master ? 'CHEFAO MESTRE' : 'CHEFAO DO MUNDO', W / 2, H * 0.4 + u * 3, Math.max(1, u - 1), '#ffd23f', 'center');
-        F.text(ctx, b.name, W / 2 - (1 - k) * W, H * 0.4 + u * 11, Math.min(u * 2, Math.floor((W - 20) / (b.name.length * 6))), '#ffffff', 'center', { shadow: '#000' });
+        F.text(ctx, b.supreme ? 'NIVEL SUPREMO' : b.master ? 'CHEFAO MESTRE NIVEL ' + b.mlevel : 'CHEFAO DO MUNDO', W / 2, H * 0.4 + u * 3, Math.max(1, u - 1), '#ffd23f', 'center');
+        F.text(ctx, b.name, W / 2 - (1 - k) * W, H * 0.4 + u * 11, Math.max(1, Math.min(u * 2, Math.floor((W - 24) / (b.name.length * 7)))), '#ffffff', 'center', { shadow: '#000' });
         const atk = b.attacks.map((a) => ATTACK_NAMES[a]).join(' ');
         F.text(ctx, 'AGITACAO ' + b.maxHp + '   ' + atk, W / 2, H * 0.4 + u * 20, Math.max(1, u - 1), '#ffb0b0', 'center');
       }
@@ -122,7 +122,7 @@
       if (c.t > 1.7) {
         const k = clamp((c.t - 1.7) / 0.3, 0, 1);
         ctx.fillStyle = rgba('#ffd23f', 0.3); ctx.fillRect(0, H * 0.42, W, u * 16);
-        F.text(ctx, b.master ? 'VOCE ZEROU!' : 'ELE SE ACALMOU!', W / 2, H * 0.42 + u * 4 - (1 - k) * 40, u * 2, '#ffffff', 'center', { shadow: '#7a3a00' });
+        F.text(ctx, b.supreme ? 'VOCE ZEROU!' : 'ELE SE ACALMOU!', W / 2, H * 0.42 + u * 4 - (1 - k) * 40, u * 2, '#ffffff', 'center', { shadow: '#7a3a00' });
       }
     }
   };
@@ -276,9 +276,10 @@
     const o = opts || {}, t = o.t || 0;
     const w = size * s * 0.9, h = s * 2.6;
     const worldCol = o.color || '#c065d8';
+    const supreme = look === 'supreme'; if (supreme) look = 'master'; // Suprema: mesma forma do Mestre, roxo e dourado
     const palette = {
       skull: ['#d8d8e0', '#9a9aa8'], ghost: ['#bfe9ff', '#6aa9c9'], totem: ['#9c6a3c', '#5e3d1f'], magma: ['#3a1208', '#ff6a1a'],
-      kraken: ['#2a6f8a', '#1a3e55'], pharaoh: ['#f5c542', '#2a5bff'], shadow: ['#1a0a24', '#b04cff'], core: ['#7a0d0d', '#ff3b3b'], master: ['#f7f0d0', '#ffd23f'],
+      kraken: ['#2a6f8a', '#1a3e55'], pharaoh: ['#f5c542', '#2a5bff'], shadow: ['#1a0a24', '#b04cff'], core: ['#7a0d0d', '#ff3b3b'], master: supreme ? ['#3a0f5a', '#ffd23f'] : ['#f7f0d0', '#ffd23f'],
     }[look] || [shade(worldCol, 0.8), shade(worldCol, 0.5)];
     let body = palette[0];
     if (o.flash) body = '#ffffff'; else if (o.stunned) body = Math.floor(t * 10) % 2 ? '#dfe8ff' : '#9ad8ff'; else if (o.enraged && Math.floor(t * 6) % 2) body = shade(palette[0], 1.25);

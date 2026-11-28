@@ -99,7 +99,7 @@
       else if (ch === T.SHIELD || ch === T.FREEZE || ch === T.MAGNET) col = '#8cf5ff';
       if (col) { x.fillStyle = col; x.fillRect(i * cell + pad, y * cell + pad, cell - pad * 2, cell - pad * 2); }
     }
-    if (L.boss && this.drawBossSprite) this.drawBossSprite(x, cell * 6, cell * 2.5, cell, L.boss.master ? 'master' : root.BossLooks[L.world % 8], 3, { t: 0, color: wd.color });
+    if (L.boss && this.drawBossSprite) this.drawBossSprite(x, cell * 6, cell * 2.5, cell, L.boss.supreme ? 'supreme' : L.boss.master ? 'master' : root.BossLooks[L.world % 8], 3, { t: 0, color: wd.color });
     this.thumbs[k] = c;
     return c;
   };
@@ -154,7 +154,7 @@
     if (state === 'done') { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x - iw / 2 + 2, y - h * 0.15 + (h * 0.65 - ih) + 6, iw * 0.25, ih * 0.6); }
     // placa / emblema
     if (boss) {
-      if (this.drawBossSprite) this.drawBossSprite(ctx, x, y - h * 0.05, r * 0.42, master ? 'master' : root.BossLooks[this.worldPage % 8], 3, { t: this.t, color: wd.color, stunned: state === 'done' });
+      if (this.drawBossSprite) this.drawBossSprite(ctx, x, y - h * 0.05, r * 0.42, master ? (master === 'supreme' ? 'supreme' : 'master') : root.BossLooks[this.worldPage % 8], 3, { t: this.t, color: wd.color, stunned: state === 'done' });
       // tochas laterais
       this.drawDecor({ type: 'torch', size: 0.8, ph: 0 }, x - w * 0.62, y + h * 0.5, wd); this.drawDecor({ type: 'torch', size: 0.8, ph: 1.3 }, x + w * 0.62, y + h * 0.5, wd);
     } else {
@@ -220,7 +220,7 @@
       if (y < areaTop - 80 || y > areaBot + 80) return;
       const unlocked = this.save.unlocked > idx, done = this.save.unlocked > idx + 1 || (this.save.best[idx] || 0) > 0;
       const boss = !!L.boss, r = boss ? u * 7 : u * 4.6, selected = i === this.sel;
-      this.drawDoor(x, y, r, wd, unlocked ? (done ? 'done' : 'open') : 'locked', String(i + 1), boss, !!(L.boss && L.boss.master), selected);
+      this.drawDoor(x, y, r, wd, unlocked ? (done ? 'done' : 'open') : 'locked', String(i + 1), boss, L.boss && L.boss.supreme ? 'supreme' : !!(L.boss && L.boss.master), selected);
       const st = this.save.stars[idx] || 0;
       if (unlocked && done) { ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 8; F.text(ctx, '*'.repeat(st) + '.'.repeat(3 - st), x, y + r * 1.2 + 4, Math.max(1, u - 1), '#ffd23f', 'center'); ctx.shadowBlur = 0; }
       if (selected) { const bob = Math.sin(this.t * 6) * u; F.text(ctx, '↓', x, y - r * 1.5 - u * 9 - bob, u, '#ffffff', 'center', { shadow: wd.color }); }
