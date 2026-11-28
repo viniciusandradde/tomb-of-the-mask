@@ -26,7 +26,9 @@ Sem instalar nada além do Node. Também há `Dockerfile` e um workflow de GitHu
 - Modo Arcade: coluna infinita para cima com espaço aberto, obstáculos e uma barreira piscante na cor do trecho que sobe em velocidade média. Encostou, perdeu.
 - 3 estrelas por fase. Power-ups: Escudo (ativação manual com toque duplo), Ímã, Congelar, Viciado em Moedas e Multiplicador, melhoráveis na loja. 13 máscaras com bônus percentuais e imunidades. Baús de recompensa e Pula-fase.
 - Dificuldade crescente de verdade: mundos finais com labirintos altos e muitos perigos; chefes finais mais fortes.
-- Música chiptune e efeitos sonoros gerados em tempo real (sem arquivos de áudio).
+- Oito temas de escudo com efeitos animados, selecionáveis em **Loja → Escudos**.
+- Epílogo animado após a saída do Nível Supremo, com o resgate da princesa e a fanfarra 16 bits *Transformansion ending*, de Emma_MA. A faixa está incluída no cache offline em MP3. [Fonte e licença CC0](https://opengameart.org/content/transformansion-ending)
+- Música chiptune das fases e efeitos sonoros gerados em tempo real.
 - **Modo Lúdico** (para crianças pequenas) e **Modo Clássico**, com a mesma dificuldade: o lúdico adiciona voz em português, elogios, confete e mensagens carinhosas; a seta de dica é opcional e vem desligada.
 - Fonte pixel art própria, efeito CRT, tremor de tela, partículas.
 

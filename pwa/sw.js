@@ -1,8 +1,8 @@
 /* sw.js — cache offline. Atualize CACHE ao publicar uma nova versão. */
-const CACHE = 'tumba-v21';
+const CACHE = 'tumba-v22';
 const ASSETS = [
   './', './index.html', './style.css', './manifest.webmanifest',
-  './js/maze.js', './js/levels.js', './js/font.js', './js/audio.js', './js/game.js', './js/boss.js', './js/guardian.js', './js/map.js', './js/items.js', './js/wellbeing.js', './js/app.js',
+  './js/maze.js', './js/levels.js', './js/font.js', './js/audio.js', './js/game.js', './js/boss.js', './js/guardian.js', './js/map.js', './js/items.js', './js/shields.js', './js/ending.js', './assets/transformansion-ending.mp3', './js/wellbeing.js', './js/app.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
   './assets/keyart.png', './assets/bg-catacumba.png', './assets/bg-cripta.png', './assets/bg-selva.png',
   './assets/bg-vulcao.png', './assets/bg-abismo.png', './assets/bg-templo.png',

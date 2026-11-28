@@ -193,13 +193,17 @@
       c.addEventListener('click', () => this.audio.unlock());
       // quando o contexto de áudio finalmente ficar ativo, começa a música da tela atual
       this.audio.onReady = () => {
+        if (this.state === 'ending') { this.syncEndingAudio(); return; }
         if (this.audio.music) return;
         const menus = ['title', 'worlds', 'levels', 'shop', 'settings'];
         if (menus.includes(this.state)) this.audio.startMusic(99);
         else if (this.world) this.audio.startMusic(this.world.music);
       };
       root.addEventListener('blur', () => { if (this.state === 'play') this.togglePause(true); });
-      document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'play') this.togglePause(true); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && this.state === 'play') this.togglePause(true);
+        if (this.state === 'ending') this.updateEndingVisibility();
+      });
     }
 
     input(dir) {
@@ -212,6 +216,7 @@
     confirm() {
       if (this.state === 'title') this.goto('worlds');
       else if (this.state === 'dead') this.restart();
+      else if (this.state === 'ending') this.finishEnding();
       else if (this.state === 'win') this.nextLevel();
       else if (this.state === 'arcadeover') this.goto('title');
       else if (this.state === 'pause') this.togglePause();
@@ -229,6 +234,7 @@
 
     // ------------------------------------------------------------ estados
     goto(state) {
+      if (this.state === 'ending') this.audio.stopMusic();
       this.state = state; this.buttons = [];
       if (state === 'levels') this.mapInit();
       if (state === 'title' || state === 'worlds' || state === 'levels' || state === 'shop' || state === 'settings') {
@@ -483,7 +489,7 @@
         this.core.t += dt;
         if (p.cx === this.core.x && p.cy === this.core.y) {
           this.core = null; b.stun = 6; b.coreTimer = 1.2;
-          this.audio.powerup(); this.burst(p.x, p.y, 16, '#8cf5ff', 3);
+          this.audio.powerup(); this.burst(p.x, p.y, 16, this.shieldTheme().color, 3);
           this.toastMsg('CHEFAO TONTO! LEVE A LUZ ATE ELE!');
           if (this.kids()) this.speak('Agora leve a luz até ele, de levinho!');
         }
@@ -821,7 +827,7 @@
         this.burst(x + 0.5, y + 0.5, 12, '#ffd23f', 2.5);
         this.toastMsg('+' + v + ' $');
         if (this.isGuardianLevel && this.isGuardianLevel()) this.guardianFlower();
-      } else if (c === T.SHIELD) { p.shield = 1; this.audio.powerup(); this.toastMsg('ESCUDO!'); this.burst(x + 0.5, y + 0.5, 10, '#8cf5ff', 2); }
+      } else if (c === T.SHIELD) { this.activateShield(); }
       else if (c === T.FREEZE) { p.freeze = this.duration('freeze'); this.audio.powerup(); this.toastMsg('CONGELAR!'); this.burst(x + 0.5, y + 0.5, 10, '#ffffff', 2); }
       else if (c === T.ADDICT) { p.addict = this.duration('addict'); this.audio.powerup(); this.toastMsg('VICIADO EM MOEDAS!'); this.burst(x + 0.5, y + 0.5, 12, '#ffd23f', 2); }
       else if (c === T.BOOST) { p.boost = this.duration('boost'); this.audio.powerup(); this.toastMsg('PONTOS X' + this.boostMult() + '!'); this.burst(x + 0.5, y + 0.5, 12, '#ff4fa3', 2); }
@@ -866,7 +872,9 @@
     arcadeScore() { return Math.floor(this.height) * 10 + this.score; }
     winLevel() {
       const p = this.player; p.moving = false;
-      this.audio.win();
+      const supreme = !!(this.level.boss && this.level.boss.supreme);
+      if (supreme) this.save.zerou = true;
+      else this.audio.win();
       this.burst(p.x, p.y, 30, '#ffd23f', 4);
       const idx = this.levelIndex;
       const stars = Math.min(3, this.levelCoins);
@@ -880,11 +888,11 @@
       this.newWorld = wasUnlocked !== this.save.unlocked && root.LEVELS[idx + 1] && root.LEVELS[idx + 1].world !== root.LEVELS[idx].world;
       Save.write();
       this.state = 'win'; this.buttons = []; this.winAt = this.t;
-      if (this.wbMaybeWarn) setTimeout(() => this.wbMaybeWarn(), 900);
+      if (!supreme && this.wbMaybeWarn) setTimeout(() => this.wbMaybeWarn(), 900);
       this.winTitle = this.level.guardian ? 'VOCE MERECEU PASSAR!' : this.kids() ? this.pick(['MUITO BEM!', 'INCRIVEL!', 'VOCE CONSEGUIU!', 'UAU!']) : 'COMPLETA!';
       if (this.level.guardian && this.guardianWinLine) this.guardianWinLine();
       this.confetti = (this.kids() || this.level.boss) ? (this.level.boss && this.level.boss.master ? 3 : 1) : 0;
-      if (this.level.boss && this.level.boss.supreme) { this.save.zerou = true; if (this.kids()) this.speak('Você acalmou a Máscara Suprema e zerou o jogo! Parabéns, campeão!'); }
+      if (supreme) { this.startEnding(); return; }
       else if (this.level.boss && this.level.boss.master && this.kids()) this.speak('Muito bem! Agora a Máscara Mestre vai ficar mais forte. Vamos para o próximo nível!');
       if (this.kids()) this.speak(this.pick(ELOGIOS) + (stars === 3 ? ' Três estrelas!' : stars === 0 ? ' Tente pegar as estrelas douradas!' : ''));
     }
@@ -932,6 +940,7 @@
         if (this.state === 'arcadeover') this.renderArcadeOver();
         if ((this.state === 'bossintro' || this.state === 'bossdeath') && this.renderBossCine) this.renderBossCine();
       } else if (this.state === 'title') this.renderTitle();
+      else if (this.state === 'ending') this.renderEnding();
       else if (this.state === 'mission') this.renderMission();
       else if (this.state === 'break') this.renderBreak();
       else if (this.state === 'hifive') this.renderHiFive();
@@ -1031,7 +1040,7 @@
         else if (c === T.SPIKE) this.drawSpike(px, py, x, y, 1, false);
         else if (c === T.TRAP) { const tr = this.traps.find((q) => q.x === x && q.y === y); const st = tr ? this.trapState(tr) : { ext: 0 }; this.drawSpike(px, py, x, y, st.ext, st.warn, true); }
         else if (c === T.EXIT) this.drawExit(px, py, pulse, this.bossAlive() || (this.guardianLocked && this.guardianLocked()));
-        else if (c === T.SHIELD) this.drawPowerup(px, py, '#8cf5ff', 'S', pulse);
+        else if (c === T.SHIELD) this.drawPowerup(px, py, this.shieldTheme().color, 'S', pulse);
         else if (c === T.FREEZE) this.drawPowerup(px, py, '#ffffff', '*', pulse);
         else if (c === T.MAGNET) this.drawPowerup(px, py, '#ff4fa3', 'U', pulse);
         else if (c === T.ADDICT) this.drawPowerup(px, py, '#ffd23f', '$', pulse);
@@ -1267,11 +1276,7 @@
         ctx.fillRect(-k * 0.22, k * 0.22, k * 0.44, k * 0.08);
       } else for (let i = -2; i <= 2; i++) if (i % 2 === 0) ctx.fillRect(i * k * 0.12 - k * 0.05, k * 0.22, k * 0.1, k * 0.1);
       ctx.restore();
-      if (p.shield > 0) {
-        ctx.strokeStyle = rgba('#8cf5ff', 0.7 + 0.3 * Math.sin(this.t * 8)); ctx.lineWidth = 2;
-        ctx.shadowColor = '#8cf5ff'; ctx.shadowBlur = 10;
-        ctx.strokeRect(cx - k * 0.68, cy - k * 0.68, k * 1.36, k * 1.36); ctx.shadowBlur = 0;
-      }
+      if (p.shield > 0) this.drawShieldAura(cx, cy, k * 0.76, this.shieldTheme());
       if (p.magnet > 0) {
         ctx.strokeStyle = rgba('#ff4fa3', 0.35); ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(cx, cy, 2.2 * s + Math.sin(this.t * 5) * 3, 0, Math.PI * 2); ctx.stroke();
@@ -1467,7 +1472,7 @@
       if (this.chest && this.drawChest) this.drawChest(cx, cy + u * 24 + (this.newWorld ? u * 8 : 0));
       const w = Math.min(this.W * 0.8, 320);
       const last = this.levelIndex + 1 >= root.LEVELS.length;
-      this.drawBigButton(last ? 'FIM! VOLTAR' : 'PROXIMA FASE', '\u25B6', cx, cy + u * 38, w, () => this.nextLevel(), '#2e9e4f', 'w1');
+      this.drawBigButton(last ? 'VOLTAR AO MENU' : 'PROXIMA FASE', '\u25B6', cx, cy + u * 38, w, () => this.nextLevel(), '#2e9e4f', 'w1');
       this.drawButton('↻ REPETIR', cx - w / 4 - 4, cy + u * 54, w / 2 - 8, () => this.restart(), null, 'w2');
       this.drawButton('⌂ MENU', cx + w / 4 + 4, cy + u * 54, w / 2 - 8, () => { this.audio.stopMusic(); this.goto('levels'); }, null, 'w3');
     }

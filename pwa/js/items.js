@@ -59,7 +59,7 @@
     const p = this.player; if (!p || this.state !== 'play') return;
     if (p.shield > 0) { this.toastMsg('ESCUDO JA ATIVO'); return; }
     if (!this.save.inv || this.save.inv.shield <= 0) { this.audio.bump(); this.toastMsg('SEM ESCUDOS. COMPRE NA LOJA'); return; }
-    this.save.inv.shield--; p.shield = 1; this.audio.powerup(); this.burst(p.x, p.y, 14, '#8cf5ff', 2.5); this.toastMsg('ESCUDO ATIVADO!');
+    this.save.inv.shield--; this.activateShield();
     try { localStorage.setItem('tumba-da-mascara-save-v1', JSON.stringify(this.save)); } catch (e) { /* ignorado */ }
     if (this.kids()) this.speak('Escudo ligado!');
   };
@@ -100,7 +100,7 @@
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(bx - 4, by - 6, u * 26, u * 7 + 14);
     ctx.strokeStyle = n > 0 ? '#8cf5ff' : '#555566'; ctx.lineWidth = 2; ctx.strokeRect(bx, by - 2, u * 6, u * 6);
     F.text(ctx, String(n), bx + u * 3, by + u * 0.5, u, n > 0 ? '#8cf5ff' : '#555566', 'center');
-    F.text(ctx, p.shield > 0 ? 'ESCUDO ATIVO' : '2X TOQUE = ESCUDO', bx + u * 7, by + 1, small, n > 0 || p.shield > 0 ? '#ffffff' : '#555566', 'left');
+    F.text(ctx, p.shield > 0 ? 'ESCUDO DE ' + this.shieldTheme().name : '2X TOQUE = ESCUDO', bx + u * 7, by + 1, small, n > 0 || p.shield > 0 ? '#ffffff' : '#555566', 'left');
     if (!this.buttons.find((b) => b.id === 'shieldbtn')) this.buttons.push({ id: 'shieldbtn', x: bx - 4, y: by - 6, w: u * 26, h: u * 7 + 14, fn: () => this.useShield() });
   };
 
@@ -150,8 +150,8 @@
     F.text(ctx, 'LOJA', cx, 12, u * 1.5 | 0 || u, '#ffffff', 'center', { shadow: '#7a3a00' });
     F.text(ctx, 'VOCE TEM $' + this.save.coins, cx, 12 + u * 12, u, '#ffd23f', 'center');
     // abas
-    const tabs = [['masks', 'MASCARAS'], ['powers', 'PODERES'], ['items', 'ITENS']];
-    const tw = Math.min(this.W - 20, 400) / 3, tx0 = cx - tw * 1.5, ty = 12 + u * 22;
+    const tabs = [['masks', 'MASCARAS'], ['powers', 'PODERES'], ['items', 'ITENS'], ['shields', 'ESCUDOS']];
+    const tw = Math.min(this.W - 20, 480) / tabs.length, tx0 = cx - tw * tabs.length / 2, ty = 12 + u * 22;
     tabs.forEach(([id, label], i) => {
       const on = this.shopTab === id;
       ctx.fillStyle = on ? rgba('#ffd23f', 0.35) : 'rgba(0,0,0,0.5)'; ctx.fillRect(tx0 + i * tw, ty, tw - 4, u * 7 + 12);
@@ -162,6 +162,7 @@
     const top = ty + u * 7 + 24, bottom = this.H - u * 7 - 40;
     if (this.shopTab === 'masks') this.renderShopMasks(top, bottom);
     else if (this.shopTab === 'powers') this.renderShopPowers(top, bottom);
+    else if (this.shopTab === 'shields') this.renderShieldThemes(top, bottom);
     else this.renderShopItems(top, bottom);
     this.drawButton('< VOLTAR', cx, this.H - u * 7 - 14, Math.min(this.W * 0.6, 220), () => this.goto('title'), '#888899', 'back');
     if (this.toast) { ctx.globalAlpha = clamp(this.toast.t * 2, 0, 1); F.text(ctx, this.toast.msg, cx, this.H * 0.5, u, '#ffd23f', 'center', { shadow: '#000' }); ctx.globalAlpha = 1; this.toast.t -= 1 / 60; if (this.toast.t <= 0) this.toast = null; }
