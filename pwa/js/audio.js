@@ -198,7 +198,39 @@
       this.music = { track, step, melody, bassPat, progression, rootN, arp, pos: 0, nextTime: this.ctx.currentTime + 0.1, timer: null };
       this.music.timer = setInterval(() => this.schedule(), 40);
     }
+    async startEndingMusic(position) {
+      if (!this.ready() || !this.musicOn || this.endingPlayback) return;
+      this.stopMusic();
+      const playback = {};
+      this.endingPlayback = playback;
+      try {
+        if (!this.endingBuffer) {
+          this.endingBuffer = fetch('assets/transformansion-ending.mp3')
+            .then(response => {
+              if (!response.ok) throw new Error('Trilha indisponível');
+              return response.arrayBuffer();
+            }).then(bytes => this.ctx.decodeAudioData(bytes));
+        }
+        const buffer = await this.endingBuffer;
+        if (this.endingPlayback !== playback) return;
+        const offset = position();
+        if (offset >= buffer.duration) return;
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.musicGain);
+        playback.source = source;
+        source.start(0, offset);
+      } catch (error) {
+        this.endingBuffer = null;
+        if (this.endingPlayback === playback) this.endingPlayback = null;
+      }
+    }
     stopMusic() {
+      if (this.endingPlayback) {
+        const source = this.endingPlayback.source;
+        if (source) { source.stop(); source.disconnect(); }
+        this.endingPlayback = null;
+      }
       if (this.music) { clearInterval(this.music.timer); this.music = null; }
     }
     schedule() {

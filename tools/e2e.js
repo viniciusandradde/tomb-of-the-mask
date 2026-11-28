@@ -330,6 +330,56 @@ const { spawn } = require('child_process');
   const sw = await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return !!r; });
   const manifest = await page.evaluate(async () => (await fetch('manifest.webmanifest')).ok);
   console.log('service worker registrado:', sw, '| manifest ok:', manifest);
+  // Os temas usam a mesma carga. A escolha sobrevive ao recarregamento.
+  const assert = require('node:assert/strict');
+  await page.evaluate(() => { game.goto('shop'); });
+  const tapButton = async (id) => {
+    await page.waitForFunction(id => game.buttons.some(b => b.id === id), id);
+    const { x, y } = await page.evaluate(id => {
+      const b = game.buttons.find(b => b.id === id); return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+    }, id);
+    await page.mouse.click(x, y);
+  };
+  await tapButton('tabshields');
+  for (const id of ['agua', 'fogo', 'choque', 'raio', 'trovao', 'gelo', 'folha', 'cristal']) {
+    await tapButton('shield-' + id);
+    assert.equal(await page.evaluate(() => game.shieldTheme().id), id);
+  }
+  await page.screenshot({ path: path.join(out, 'escudos-elementais.png') });
+  await page.reload();
+  await page.waitForFunction(() => window.game && navigator.serviceWorker.controller);
+  assert.equal(await page.evaluate(() => game.shieldTheme().id), 'cristal');
+  await page.evaluate(() => { game.save.kids = false; game.save.inv.shield = 2; game.startLevel(0); });
+  await page.keyboard.press('e');
+  assert.deepEqual(await page.evaluate(() => {
+    game.useShield();
+    game.hit('espinho');
+    return [game.player.shield, game.save.inv.shield, game.state, game.player.invul > 0];
+  }), [0, 1, 'play', true]);
+
+  // O epílogo, incluindo a faixa decodificada, precisa funcionar a partir do cache.
+  await page.context().setOffline(true);
+  await page.reload();
+  await page.waitForFunction(() => window.game);
+  await page.keyboard.press('e'); // gesto que libera o AudioContext
+  await page.evaluate(() => {
+    game.save.kids = false;
+    game.startLevel(LEVELS.length - 1); game.skipBossIntro();
+    game.boss.dead = true;
+    game.enterCell(LEVELS.at(-1).rows[0].indexOf('E'), 0);
+  });
+  await page.waitForFunction(() => game.state === 'ending' && game.audio.endingPlayback?.source?.buffer.duration > 18);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('tumba-da-mascara-save-v1')).zerou), true);
+  await page.evaluate(() => { game.endingTime = 6; game.endingSince = performance.now(); });
+  await page.screenshot({ path: path.join(out, 'resgate.png') });
+  await page.evaluate(() => { game.endingTime = 15; game.endingSince = performance.now(); });
+  await page.screenshot({ path: path.join(out, 'aurora.png') });
+  await page.waitForFunction(() => game.state === 'win');
+  assert.equal(await page.evaluate(() => !!game.audio.endingPlayback), false);
+  await page.evaluate(() => { game.audio.setMusic(false); game.startEnding(); });
+  await tapButton('ending-skip');
+  assert.deepEqual(await page.evaluate(() => [game.state, !!game.audio.endingPlayback]), ['win', false]);
+  await page.context().setOffline(false);
   await browser.close();
   srv.kill();
   if (errors.length) { console.log('ERROS DE CONSOLE:'); errors.forEach((e) => console.log(' -', e)); process.exit(1); }

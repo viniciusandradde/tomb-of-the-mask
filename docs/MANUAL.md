@@ -59,3 +59,9 @@ Efeito CRT, Tremer tela, Pausa saudável (pais), Apagar progresso.
   (Acessibilidade / Conversão de texto em voz).
 - **Jogo antigo no celular:** feche o app e abra com internet uma vez; o cache atualiza sozinho.
 - **Progresso:** fica salvo no aparelho (localStorage). "Apagar progresso" em Opções zera tudo (pede confirmação).
+
+### Escudos elementais e resgate da princesa
+
+Em **Loja → Escudos**, toque num elemento para equipá-lo. Os oito temas são gratuitos. Água tem ondas, fogo tem chamas, choque solta faíscas, raio carrega relâmpagos e trovão emite anéis. Gelo, folha e cristal completam a coleção. A escolha vale para o escudo da mochila, o encontrado no labirinto e o escudo inicial da máscara Mestre. Cada carga protege de um impacto. Ative uma carga da mochila com dois toques ou com a tecla E.
+
+Ao atravessar a saída do Nível Supremo, você encontra a princesa. O escudo escolhido ajuda a abrir o cristal que a aprisiona. A aventura já estará salva quando a cena começar. Use **Pular cena** ou Enter para ir direto à pontuação. A trilha segue a opção **Música** e acompanha o jogo offline.
